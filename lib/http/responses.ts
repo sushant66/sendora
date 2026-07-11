@@ -30,6 +30,14 @@ export function conflict(error: string): NextResponse {
   return NextResponse.json({ error }, { status: 409 });
 }
 
+/** 422 for unsupported merge tokens, matching contracts/http-api.md (FR-011). */
+export function unsupportedMergeFields(tokens: string[]): NextResponse {
+  return NextResponse.json(
+    { error: "unsupported_merge_fields", fields: tokens.map((t) => `{{${t}}}`) },
+    { status: 422 },
+  );
+}
+
 /** 422 with per-field messages, matching contracts/http-api.md. */
 export function validationError(err: z.ZodError): NextResponse {
   const fields: Record<string, string> = {};

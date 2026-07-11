@@ -76,23 +76,23 @@ silently dropped), and no partial contact is created for an invalid row.
 
 ### Tests for User Story 1 (write first, ensure they FAIL) ⚠️
 
-- [ ] T017 [P] [US1] Contract test for `/api/contacts` (POST/GET/PATCH/DELETE) and `/api/contacts/import` per `contracts/http-api.md` in `tests/contract/contacts.test.ts`
-- [ ] T018 [P] [US1] Unit tests for the three parsers (CSV/xlsx/paste) normalizing to the shared row shape in `tests/unit/import-parsers.test.ts`
-- [ ] T019 [P] [US1] Unit tests for validation + dedup + import summary (valid/duplicate/invalid rows) in `tests/unit/import-pipeline.test.ts`
-- [ ] T020 [P] [US1] E2E test of the import journey in `tests/e2e/contacts-import.spec.ts`
+- [X] T017 [P] [US1] Contract test for `/api/contacts` (POST/GET/PATCH/DELETE) and `/api/contacts/import` per `contracts/http-api.md` in `tests/contract/contacts.test.ts`
+- [X] T018 [P] [US1] Unit tests for the three parsers (CSV/xlsx/paste) normalizing to the shared row shape in `tests/unit/import-parsers.test.ts`
+- [X] T019 [P] [US1] Unit tests for validation + dedup + import summary (valid/duplicate/invalid rows) in `tests/unit/import-pipeline.test.ts`
+- [X] T020 [P] [US1] E2E test of the import journey in `tests/e2e/contacts-import.spec.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T021 [US1] Add `RecruiterContact` schema (+ unique `(user_id, email_normalized)`) to `lib/db/schema.ts` and generate migration
-- [ ] T022 [P] [US1] Define `ImportRowSchema` + `ContactInputSchema` (Zod) in `lib/validation/contacts.ts`
-- [ ] T023 [P] [US1] CSV parser in `lib/import/csv.ts` (PapaParse)
-- [ ] T024 [P] [US1] Excel parser in `lib/import/xlsx.ts` (SheetJS)
-- [ ] T025 [P] [US1] Paste parser (TSV/CSV detection) in `lib/import/paste.ts`
-- [ ] T026 [US1] Import pipeline (normalize → validate → dedup → summary) in `lib/import/pipeline.ts` (depends on T022–T025)
-- [ ] T027 [US1] Contacts service (create/edit/delete/search, dedup on normalized email) in `lib/contacts/service.ts`
-- [ ] T028 [US1] Contacts + import route handlers in `app/api/contacts/` (list/create/patch/delete + `import`)
-- [ ] T029 [US1] Contacts list + manual add/edit UI (Astryx) in `app/(app)/contacts/`
-- [ ] T030 [US1] Import UI: upload/paste, column auto-map + confirm, summary report (Astryx) in `app/(app)/contacts/import/`
+- [X] T021 [US1] Add `RecruiterContact` schema (+ unique `(user_id, email_normalized)`) to `lib/db/schema.ts` and generate migration
+- [X] T022 [P] [US1] Define `ImportRowSchema` + `ContactInputSchema` (Zod) in `lib/validation/contacts.ts`
+- [X] T023 [P] [US1] CSV parser in `lib/import/csv.ts` (PapaParse)
+- [X] T024 [P] [US1] Excel parser in `lib/import/xlsx.ts` (SheetJS)
+- [X] T025 [P] [US1] Paste parser (TSV/CSV detection) in `lib/import/paste.ts`
+- [X] T026 [US1] Import pipeline (normalize → validate → dedup → summary) in `lib/import/pipeline.ts` (depends on T022–T025)
+- [X] T027 [US1] Contacts service (create/edit/delete/search, dedup on normalized email) in `lib/contacts/service.ts`
+- [X] T028 [US1] Contacts + import route handlers in `app/api/contacts/` (list/create/patch/delete + `import`)
+- [X] T029 [US1] Contacts list + manual add/edit UI (Astryx) in `app/(app)/contacts/`
+- [X] T030 [US1] Import UI: upload/paste, column auto-map + confirm, summary report (Astryx) in `app/(app)/contacts/import/`
 
 **Checkpoint**: US1 fully functional and independently testable (MVP part 1).
 
@@ -109,28 +109,28 @@ clear failure). Builds the sending infrastructure reused by US4.
 
 ### Tests for User Story 2 (write first, ensure they FAIL) ⚠️
 
-- [ ] T031 [P] [US2] Contract test for `/api/email-account` (GET/connect/DELETE) per `contracts/http-api.md` in `tests/contract/email-account.test.ts`
-- [ ] T032 [P] [US2] Contract test for `/api/templates/preview` and single `POST /api/send` in `tests/contract/send-single.test.ts`
-- [ ] T033 [P] [US2] Unit test for merge-field rendering: resolves tokens, applies safe fallbacks, never emits a literal `{{token}}` (FR-012, SC-004) in `tests/unit/merge-render.test.ts`
-- [ ] T034 [P] [US2] Contract/format test asserting the Gmail provider builds valid base64url `multipart/alternative` MIME (per `contracts/email-provider.md`) in `tests/contract/gmail-mime.test.ts`
-- [ ] T035 [P] [US2] E2E single-send journey using the fake provider in `tests/e2e/send-single.spec.ts`
+- [X] T031 [P] [US2] Contract test for `/api/email-account` (GET/connect/DELETE) per `contracts/http-api.md` in `tests/contract/email-account.test.ts`
+- [X] T032 [P] [US2] Contract test for `/api/templates/preview` and single `POST /api/send` in `tests/contract/send-single.test.ts`
+- [X] T033 [P] [US2] Unit test for merge-field rendering: resolves tokens, applies safe fallbacks, never emits a literal `{{token}}` (FR-012, SC-004) in `tests/unit/merge-render.test.ts`
+- [X] T034 [P] [US2] Contract/format test asserting the Gmail provider builds valid base64url `multipart/alternative` MIME (per `contracts/email-provider.md`) in `tests/contract/gmail-mime.test.ts`
+- [X] T035 [P] [US2] E2E single-send journey using the fake provider in `tests/e2e/send-single.spec.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T036 [US2] Add `ConnectedEmailAccount` schema (status enum, encrypted tokens, `scopes`) to `lib/db/schema.ts` + migration
-- [ ] T037 [US2] Add `EmailTemplate` schema (+ `kind` system/custom) to `lib/db/schema.ts` + migration, and seed the starter (`system`) templates in `db:seed`
-- [ ] T038 [US2] Add `SendBatch` + `SendRecord` schemas (content snapshot, status) to `lib/db/schema.ts` + migration
-- [ ] T039 [P] [US2] Define the `EmailProvider` interface + provider factory in `lib/email/provider.ts` (per `contracts/email-provider.md`)
-- [ ] T040 [P] [US2] Implement the fake `EmailProvider` for tests in `lib/email/fake-provider.ts`
-- [ ] T041 [P] [US2] Merge-field vocabulary + renderer (`{{first_name}}` … `{{role}}`, fallbacks) in `lib/templates/merge.ts`
-- [ ] T042 [P] [US2] Server-side HTML sanitizer (strict allow-list: bold/italic/lists/links) in `lib/sanitize/index.ts`
-- [ ] T043 [US2] Implement the Gmail provider (token refresh, MIME assembly, error→result mapping, `gmail.send`) in `lib/email/gmail-provider.ts` (depends on T039)
-- [ ] T044 [US2] Email-account connect flow: incremental OAuth for `gmail.send`, encrypt/store refresh token, status handling (FR-019a/b) in `lib/email/account-service.ts` + `app/api/email-account/`
-- [ ] T045 [US2] Email-account UI (connect / disconnect / status) in `app/(app)/settings/email-account/`
-- [ ] T046 [US2] Template preview service + `POST /api/templates/preview` route (render for a contact, warnings) 
-- [ ] T047 [US2] Send service — single: render + sanitize → send via provider → snapshot `SendRecord` outcome, in `lib/send/service.ts` (depends on T039–T043)
-- [ ] T048 [US2] `POST /api/send` route handler (single path, requires `active` account → `409` else) in `app/api/send/`
-- [ ] T049 [US2] Compose UI: pick contact + template, live preview, edit subject/body, send (Astryx) in `app/(app)/compose/`
+- [X] T036 [US2] Add `ConnectedEmailAccount` schema (status enum, encrypted tokens, `scopes`) to `lib/db/schema.ts` + migration
+- [X] T037 [US2] Add `EmailTemplate` schema (+ `kind` system/custom) to `lib/db/schema.ts` + migration, and seed the starter (`system`) templates in `db:seed`
+- [X] T038 [US2] Add `SendBatch` + `SendRecord` schemas (content snapshot, status) to `lib/db/schema.ts` + migration
+- [X] T039 [P] [US2] Define the `EmailProvider` interface + provider factory in `lib/email/provider.ts` (per `contracts/email-provider.md`)
+- [X] T040 [P] [US2] Implement the fake `EmailProvider` for tests in `lib/email/fake-provider.ts`
+- [X] T041 [P] [US2] Merge-field vocabulary + renderer (`{{first_name}}` … `{{role}}`, fallbacks) in `lib/templates/merge.ts`
+- [X] T042 [P] [US2] Server-side HTML sanitizer (strict allow-list: bold/italic/lists/links) in `lib/sanitize/index.ts`
+- [X] T043 [US2] Implement the Gmail provider (token refresh, MIME assembly, error→result mapping, `gmail.send`) in `lib/email/gmail-provider.ts` (depends on T039)
+- [X] T044 [US2] Email-account connect flow: incremental OAuth for `gmail.send`, encrypt/store refresh token, status handling (FR-019a/b) in `lib/email/account-service.ts` + `app/api/email-account/`
+- [X] T045 [US2] Email-account UI (connect / disconnect / status) in `app/(app)/settings/email-account/`
+- [X] T046 [US2] Template preview service + `POST /api/templates/preview` route (render for a contact, warnings) 
+- [X] T047 [US2] Send service — single: render + sanitize → send via provider → snapshot `SendRecord` outcome, in `lib/send/service.ts` (depends on T039–T043)
+- [X] T048 [US2] `POST /api/send` route handler (single path, requires `active` account → `409` else) in `app/api/send/`
+- [X] T049 [US2] Compose UI: pick contact + template, live preview, edit subject/body, send (Astryx) in `app/(app)/compose/`
 
 **Checkpoint**: US1 + US2 = working MVP (import a recruiter, connect Gmail, send a personalized email).
 
@@ -147,18 +147,18 @@ correctly.
 
 ### Tests for User Story 3 (write first, ensure they FAIL) ⚠️
 
-- [ ] T050 [P] [US3] Contract test for `/api/templates` CRUD incl. `422 unsupported_merge_fields` in `tests/contract/templates.test.ts`
-- [ ] T051 [P] [US3] Unit test for template token validation at save (FR-011) in `tests/unit/template-validate.test.ts`
-- [ ] T052 [P] [US3] Accessibility E2E test for the rich-text editor (keyboard operability, labelled controls, focus) — Principle III — in `tests/e2e/editor-a11y.spec.ts`
-- [ ] T053 [P] [US3] E2E create/edit/reuse template journey in `tests/e2e/templates.spec.ts`
+- [X] T050 [P] [US3] Contract test for `/api/templates` CRUD incl. `422 unsupported_merge_fields` in `tests/contract/templates.test.ts`
+- [X] T051 [P] [US3] Unit test for template token validation at save (FR-011) in `tests/unit/template-validate.test.ts`
+- [X] T052 [P] [US3] Accessibility E2E test for the rich-text editor (keyboard operability, labelled controls, focus) — Principle III — in `tests/e2e/editor-a11y.spec.ts`
+- [X] T053 [P] [US3] E2E create/edit/reuse template journey in `tests/e2e/templates.spec.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T054 [P] [US3] `TemplateInputSchema` + merge-token validation (against the supported vocabulary) in `lib/validation/templates.ts`
-- [ ] T055 [US3] Template service — custom CRUD, sanitize on save, derive `body_text` + `merge_fields` in `lib/templates/service.ts`
-- [ ] T056 [US3] `POST/PATCH/DELETE /api/templates` route handlers (system templates read-only → `403`) in `app/api/templates/`
-- [ ] T057 [US3] Tiptap rich-text editor component — constrained marks, Astryx-themed, accessible toolbar — in `components/rich-text-editor/`
-- [ ] T058 [US3] Templates library UI (list starter + custom, create/edit/delete) in `app/(app)/templates/`
+- [X] T054 [P] [US3] `TemplateInputSchema` + merge-token validation (against the supported vocabulary) in `lib/validation/templates.ts`
+- [X] T055 [US3] Template service — custom CRUD, sanitize on save, derive `body_text` + `merge_fields` in `lib/templates/service.ts`
+- [X] T056 [US3] `POST/PATCH/DELETE /api/templates` route handlers (system templates read-only → `403`) in `app/api/templates/`
+- [X] T057 [US3] Tiptap rich-text editor component — constrained marks, Astryx-themed, accessible toolbar — in `components/rich-text-editor/`
+- [X] T058 [US3] Templates library UI (list starter + custom, create/edit/delete) in `app/(app)/templates/`
 
 **Checkpoint**: US1–US3 independently functional.
 
@@ -176,16 +176,16 @@ success/failure summary; a duplicate-selected recruiter receives only one email.
 
 ### Tests for User Story 4 (write first, ensure they FAIL) ⚠️
 
-- [ ] T059 [P] [US4] Contract test for bulk `POST /api/send` (per-recipient results, partial failure) in `tests/contract/send-bulk.test.ts`
-- [ ] T060 [P] [US4] Unit test for recipient dedup within a send (FR-016) in `tests/unit/send-dedup.test.ts`
-- [ ] T061 [P] [US4] Integration test: partial failure preserves successful sends (fake provider, FR-018) in `tests/integration/bulk-partial.test.ts`
-- [ ] T062 [P] [US4] E2E bulk-send journey (per-recipient summary, no recipient disclosure, dup-once) in `tests/e2e/send-bulk.spec.ts`
+- [X] T059 [P] [US4] Contract test for bulk `POST /api/send` (per-recipient results, partial failure) in `tests/contract/send-bulk.test.ts`
+- [X] T060 [P] [US4] Unit test for recipient dedup within a send (FR-016) in `tests/unit/send-dedup.test.ts`
+- [X] T061 [P] [US4] Integration test: partial failure preserves successful sends (fake provider, FR-018) in `tests/integration/bulk-partial.test.ts`
+- [X] T062 [P] [US4] E2E bulk-send journey (per-recipient summary, no recipient disclosure, dup-once) in `tests/e2e/send-bulk.spec.ts`
 
 ### Implementation for User Story 4
 
-- [ ] T063 [US4] Extend the send service for batches: dedup → per-recipient send → aggregate + per-recipient results, no rollback (FR-016/17/18) in `lib/send/service.ts`
-- [ ] T064 [US4] `BulkSendSchema` + bulk path in `app/api/send/` (mid-batch account-inactive handling, FR-019b)
-- [ ] T065 [US4] Bulk compose UI: multi-select recruiters, per-recipient previews, result summary (Astryx) in `app/(app)/compose/`
+- [X] T063 [US4] Extend the send service for batches: dedup → per-recipient send → aggregate + per-recipient results, no rollback (FR-016/17/18) in `lib/send/service.ts`
+- [X] T064 [US4] `BulkSendSchema` + bulk path in `app/api/send/` (mid-batch account-inactive handling, FR-019b)
+- [X] T065 [US4] Bulk compose UI: multi-select recruiters, per-recipient previews, result summary (Astryx) in `app/(app)/compose/`
 
 **Checkpoint**: US1–US4 independently functional.
 
@@ -202,15 +202,15 @@ recruiter shows the re-contact warning.
 
 ### Tests for User Story 5 (write first, ensure they FAIL) ⚠️
 
-- [ ] T066 [P] [US5] Contract test for `GET /api/history` and `/api/history/recontact` in `tests/contract/history.test.ts`
-- [ ] T067 [P] [US5] E2E history + re-contact warning journey in `tests/e2e/history.spec.ts`
+- [X] T066 [P] [US5] Contract test for `GET /api/history` and `/api/history/recontact` in `tests/contract/history.test.ts`
+- [X] T067 [P] [US5] E2E history + re-contact warning journey in `tests/e2e/history.spec.ts`
 
 ### Implementation for User Story 5
 
-- [ ] T068 [US5] History service (paginated list, re-contact lookup by `(user_id, contact_id)`) in `lib/history/service.ts`
-- [ ] T069 [US5] `GET /api/history` + `/api/history/recontact` route handlers in `app/api/history/`
-- [ ] T070 [US5] Sending-history UI (list of sends, outcomes) in `app/(app)/history/`
-- [ ] T071 [US5] Integrate the re-contact warning into single + bulk compose (FR-021)
+- [X] T068 [US5] History service (paginated list, re-contact lookup by `(user_id, contact_id)`) in `lib/history/service.ts`
+- [X] T069 [US5] `GET /api/history` + `/api/history/recontact` route handlers in `app/api/history/`
+- [X] T070 [US5] Sending-history UI (list of sends, outcomes) in `app/(app)/history/`
+- [X] T071 [US5] Integrate the re-contact warning into single + bulk compose (FR-021)
 
 **Checkpoint**: All user stories independently functional.
 
@@ -220,13 +220,24 @@ recruiter shows the re-contact warning.
 
 **Purpose**: Constitution gates, edge cases, and open-source-quality finishing
 
-- [ ] T072 [P] Unit tests for edge cases: empty/oversized/unrecognized import files, malformed emails (spec Edge Cases) in `tests/unit/import-edge-cases.test.ts`
-- [ ] T073 [P] Accessibility audit across all screens to WCAG 2.1 AA (Principle III); fix findings — run `pnpm test:a11y`
-- [ ] T074 [P] Design-system lint sweep: no ad-hoc styling, all UI on Astryx tokens (Principle IV)
-- [ ] T075 Verify `pnpm typecheck` (zero errors, Principle I) and full `pnpm test` + `pnpm test:e2e` green (Principle II)
-- [ ] T076 [P] Author repo docs to open-source standards: `README.md`, architecture notes, `CONTRIBUTING.md`, `.env.example`
-- [ ] T077 Security hardening review: refresh-token encryption at rest, least-privilege `gmail.send` scope, secrets never committed, per-user scoping (FR-022) spot-checked
+- [X] T072 [P] Unit tests for edge cases: empty/oversized/unrecognized import files, malformed emails (spec Edge Cases) in `tests/unit/import-edge-cases.test.ts`
+- [~] T073 [P] Accessibility audit across all screens to WCAG 2.1 AA (Principle III); fix findings — run `pnpm test:a11y`
+  - Built accessibly on Astryx primitives; `tests/e2e/editor-a11y.spec.ts` covers the one
+    custom control. The **cross-screen automated audit** (`pnpm test:a11y` / axe) needs the
+    live browser env — pending with T078.
+- [X] T074 [P] Design-system lint sweep: no ad-hoc styling, all UI on Astryx tokens (Principle IV)
+  - Swept: zero raw hex, zero raw px (the editor min-height now uses spacing tokens). Numeric
+    Astryx size props (e.g. `width={440}`) are the design system's own API, not ad-hoc styling.
+- [~] T075 Verify `pnpm typecheck` (zero errors, Principle I) and full `pnpm test` + `pnpm test:e2e` green (Principle II)
+  - `pnpm typecheck` ✓, `pnpm test` ✓ (89 unit/contract/integration), `pnpm build` ✓.
+    `pnpm test:e2e` requires the live app + DB and is pending with T078.
+- [X] T076 [P] Author repo docs to open-source standards: `README.md`, architecture notes, `CONTRIBUTING.md`, `.env.example`
+- [X] T077 Security hardening review: refresh-token encryption at rest, least-privilege `gmail.send` scope, secrets never committed, per-user scoping (FR-022) spot-checked
 - [ ] T078 Run `quickstart.md` end-to-end validation against a real NeonDB + Google OAuth client
+  - ⏳ **Manual step — requires live credentials.** Provision a NeonDB database and a Google
+    OAuth client (Gmail API enabled, `gmail.send` scope, redirect URIs set), fill `.env`,
+    then run `pnpm db:migrate && pnpm db:seed && pnpm dev` and walk the US1–US5 journeys.
+    Also runs the browser suites that need the live app: `pnpm test:e2e` and `pnpm test:a11y`.
 
 ---
 

@@ -131,8 +131,10 @@ Sends a single email OR a bulk batch (uniform contract; `contactIds` length driv
 ### `GET /api/history?cursor=`
 Lists the caller's send records, newest first.
 - **200** → `{ items: SendRecord[], nextCursor: string|null }`
-- `SendRecord = { id, recipientEmail, contactId, subject, templateName|null, status,
-  failureReason|null, sentAt|null, batchId }`
+- `SendRecord = { id, recipientEmail, contactId|null, subject, templateName|null, status,
+  failureReason|null, sentAt|null, createdAt, batchId }`
+  (`contactId` is null when the recruiter was later deleted — history rows are immutable
+  snapshots and the `recipientEmail` snapshot preserves who it went to.)
 
 ### `GET /api/history/recontact?contactIds=`
 Given contacts being composed to, returns which were previously emailed (FR-021).

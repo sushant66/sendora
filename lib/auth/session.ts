@@ -1,4 +1,7 @@
 import { auth } from "./config";
+import { UnauthorizedError } from "@/lib/errors";
+
+export { UnauthorizedError };
 
 export type CurrentUser = {
   id: string;
@@ -28,11 +31,4 @@ export async function requireUser(): Promise<CurrentUser> {
   const user = await getCurrentUser();
   if (!user) throw new UnauthorizedError();
   return user;
-}
-
-export class UnauthorizedError extends Error {
-  constructor() {
-    super("Unauthorized");
-    this.name = "UnauthorizedError";
-  }
 }
