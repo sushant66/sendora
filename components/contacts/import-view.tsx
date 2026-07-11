@@ -146,14 +146,18 @@ export function ImportView() {
         <ImportSummary result={result} onDone={reset} />
       ) : (
         <>
-          <SegmentedControl
-            label="Import method"
-            value={method}
-            onChange={(v) => { setMethod(v as Method); reset(); }}
-          >
-            <SegmentedControlItem value="upload" label="Upload file" />
-            <SegmentedControlItem value="paste" label="Paste rows" />
-          </SegmentedControl>
+          {/* Wrapped so the control hugs its two segments instead of stretching the track
+              full-width (which leaves a large empty area to the right of the segments). */}
+          <HStack>
+            <SegmentedControl
+              label="Import method"
+              value={method}
+              onChange={(v) => { setMethod(v as Method); reset(); }}
+            >
+              <SegmentedControlItem value="upload" label="Upload file" />
+              <SegmentedControlItem value="paste" label="Paste rows" />
+            </SegmentedControl>
+          </HStack>
 
           {method === "upload" ? (
             <FileInput
@@ -166,7 +170,7 @@ export function ImportView() {
               description="CSV or Excel (.xlsx). The first row should be column headers."
             />
           ) : (
-            <VStack gap={2} align="start">
+            <VStack gap={3} align="stretch">
               <TextArea
                 label="Paste rows"
                 isLabelHidden
@@ -175,7 +179,9 @@ export function ImportView() {
                 rows={7}
                 placeholder={"name, email, company, role\nAda Lovelace, ada@analytical.io, Analytical Engines, Lead Recruiter"}
               />
-              <Button label="Preview rows" variant="secondary" onClick={onPreviewPaste} />
+              <HStack>
+                <Button label="Preview rows" variant="secondary" onClick={onPreviewPaste} />
+              </HStack>
             </VStack>
           )}
 

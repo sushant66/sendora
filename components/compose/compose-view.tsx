@@ -154,11 +154,23 @@ export function ComposeView() {
 
   if (isLoading) {
     return (
-      <VStack gap={4}>
-        <Skeleton height={40} width={220} />
-        <Grid columns={{ minWidth: 340 }} gap={5}>
-          <Skeleton height={420} />
-          <Skeleton height={420} />
+      <VStack gap={5}>
+        <VStack gap={1} align="stretch">
+          <Skeleton height={28} width={150} radius={2} />
+          <Skeleton height={16} width={440} radius={2} />
+        </VStack>
+        <Grid columns={{ minWidth: 360 }} gap={5}>
+          <VStack gap={4} align="stretch">
+            <FieldSkeleton />
+            <FieldSkeleton />
+            <FieldSkeleton />
+            <FieldSkeleton controlHeight={180} />
+            <HStack justify="between" align="center">
+              <Skeleton height={14} width={150} radius={2} />
+              <Skeleton height={40} width={120} radius={2} />
+            </HStack>
+          </VStack>
+          <Skeleton height={320} radius={3} />
         </Grid>
       </VStack>
     );
@@ -273,6 +285,16 @@ export function ComposeView() {
   );
 }
 
+// A labelled form control while loading: a short label bar over a control-height block.
+function FieldSkeleton({ controlHeight = 40 }: { controlHeight?: number }) {
+  return (
+    <VStack gap={1} align="stretch">
+      <Skeleton height={12} width={90} radius={2} />
+      <Skeleton height={controlHeight} radius={2} />
+    </VStack>
+  );
+}
+
 function SendResultPanel({
   result,
   contactsById,
@@ -305,7 +327,9 @@ function SendResultPanel({
   ];
 
   return (
-    <VStack gap={3} align="stretch">
+    // Constrained so the confirmation reads as a composed summary, not a full-width green
+    // slab with the action stranded far right across an empty expanse.
+    <VStack gap={3} align="stretch" style={{ maxWidth: 640 }}>
       <Banner
         status={allSent ? "success" : result.sent > 0 ? "warning" : "error"}
         container="card"

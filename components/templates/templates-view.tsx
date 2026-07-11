@@ -8,7 +8,7 @@ import { Heading } from "@astryxdesign/core/Heading";
 import { Text } from "@astryxdesign/core/Text";
 import { Button } from "@astryxdesign/core/Button";
 import { Badge } from "@astryxdesign/core/Badge";
-import { Skeleton } from "@astryxdesign/core/Skeleton";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { MoreMenu } from "@astryxdesign/core/MoreMenu";
 import { AlertDialog } from "@astryxdesign/core/AlertDialog";
 import { EmptyState } from "@astryxdesign/core/EmptyState";
@@ -87,7 +87,7 @@ export function TemplatesView() {
     {
       key: "actions",
       header: "",
-      width: pixel(48),
+      width: pixel(72),
       align: "end",
       renderCell: (t) =>
         t.kind === "custom" ? (
@@ -101,19 +101,19 @@ export function TemplatesView() {
             ]}
           />
         ) : (
-          <Button
-            label="Duplicate"
-            variant="ghost"
+          <MoreMenu
+            label={`Actions for ${t.name}`}
             size="sm"
-            onClick={() => { setEditing({ ...t, id: "", kind: "custom", name: `${t.name} (copy)` }); setEditorOpen(true); }}
-            tooltip="Starter templates are read-only — duplicate to customize"
+            items={[
+              { label: "Duplicate to customize", onClick: () => { setEditing({ ...t, id: "", kind: "custom", name: `${t.name} (copy)` }); setEditorOpen(true); } },
+            ]}
           />
         ),
     },
   ];
 
   return (
-    <VStack gap={5}>
+    <VStack gap={8}>
       <HStack justify="between" align="center" gap={4}>
         <VStack gap={1}>
           <Heading level={1}>Templates</Heading>
@@ -123,9 +123,7 @@ export function TemplatesView() {
       </HStack>
 
       {templates === null ? (
-        <VStack gap={2}>
-          {[0, 1, 2, 3].map((i) => <Skeleton key={i} height={44} />)}
-        </VStack>
+        <TableSkeleton columns={[2, 2, 1.5, { px: 72 }]} rows={4} />
       ) : templates.length === 0 ? (
         <EmptyState
           title="No templates yet"

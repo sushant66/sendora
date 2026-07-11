@@ -1,0 +1,46 @@
+/*
+ * Design-system overrides for Astryx. Loaded once in app/layout.tsx, after Astryx's own
+ * stylesheets so these win. Keep this tiny and token-based — it exists only to patch gaps
+ * where a component offers no prop for a behavior we need. Prefer component props/theme first.
+ */
+
+/*
+ * Astryx Banner top-aligns every header child so the status icon lines up with the first
+ * line of the title. When endContent carries an action button and the banner also has a
+ * two-line description, that button ends up top-aligned — visibly "floating up" instead of
+ * centered against the text. Center only the trailing action; the icon and title keep their
+ * intended top alignment.
+ */
+.astryx-banner > :last-child {
+  align-self: center;
+}
+
+/*
+ * Astryx's table scroll-wrapper bleeds upward with a negative block-start margin (intended
+ * for a table sitting inside a padded Section). Our tables sit in plain stacks, so that
+ * pull-up collapses the gap above the table below the intended spacing — and the loading
+ * Skeleton, which has no such margin, ends up starting lower than the real table. That makes
+ * the shimmer and the loaded table misalign. Zero only the vertical bleed (horizontal stays,
+ * so wide tables still scroll edge-to-edge) so table and skeleton share the stack's own gap.
+ */
+.astryx-table-scroll-wrapper {
+  margin-block-start: 0;
+}
+
+/*
+ * Toasts render on an INVERTED "media" surface via MediaTheme, which flips `color-scheme` so
+ * light-dark() tokens resolve to the opposite side. But this theme ships fixed-hex text tokens
+ * (not light-dark()), so the surface inverts (white in dark mode) while the ink stays light —
+ * light text on a white toast (~1.3:1, unreadable). The inversion can't be patched cleanly
+ * (light-dark() resolves against the wrong element's color-scheme), so pin the info toast to the
+ * app's own elevated surface instead: surface and primary ink both track the mode together, so
+ * it's always readable — and a non-inverted toast suits the calm brand. The error toast keeps its
+ * semantic red; force pure-white ink so it clears AA on that red.
+ */
+.astryx-toast.info {
+  background-color: var(--color-background-surface) !important;
+}
+.astryx-toast.error {
+  --color-text-primary: var(--color-on-dark);
+  --color-icon-primary: var(--color-on-dark);
+}

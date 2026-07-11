@@ -10,7 +10,7 @@ import { Text } from "@astryxdesign/core/Text";
 import { Button } from "@astryxdesign/core/Button";
 import { TextInput } from "@astryxdesign/core/TextInput";
 import { EmptyState } from "@astryxdesign/core/EmptyState";
-import { Skeleton } from "@astryxdesign/core/Skeleton";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { MoreMenu } from "@astryxdesign/core/MoreMenu";
 import { AlertDialog } from "@astryxdesign/core/AlertDialog";
 import { useToast } from "@astryxdesign/core/Toast";
@@ -99,7 +99,7 @@ export function ContactsView() {
   }
 
   const columns: TableColumn<Contact>[] = [
-    { key: "name", header: "Name", width: proportional(2) },
+    { key: "name", header: "Name", width: proportional(1.5) },
     {
       key: "email",
       header: "Email",
@@ -111,7 +111,7 @@ export function ContactsView() {
     {
       key: "actions",
       header: "",
-      width: pixel(48),
+      width: pixel(72),
       align: "end",
       renderCell: (row) => (
         <MoreMenu
@@ -142,62 +142,60 @@ export function ContactsView() {
         </HStack>
       </HStack>
 
-      <TextInput
-        label="Search contacts"
-        isLabelHidden
-        placeholder="Search by name, email, or company"
-        startIcon="search"
-        hasClear
-        value={query}
-        onChange={setQuery}
-        size="lg"
-      />
+      <VStack gap={8}>
+        <TextInput
+          label="Search contacts"
+          isLabelHidden
+          placeholder="Search by name, email, or company"
+          startIcon="search"
+          hasClear
+          value={query}
+          onChange={setQuery}
+          size="lg"
+        />
 
-      {isLoading ? (
-        <VStack gap={2}>
-          {[0, 1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} height={44} />
-          ))}
-        </VStack>
-      ) : contacts.length === 0 ? (
-        hasSearch ? (
-          <EmptyState
-            icon={<SearchGlyph />}
-            title={`No contacts match "${query.trim()}"`}
-            description="Try a different name, email, or company."
-            actions={<Button label="Clear search" variant="secondary" onClick={() => setQuery("")} />}
-          />
+        {isLoading ? (
+          <TableSkeleton columns={[1.5, 2, 1.5, 1.5, { px: 72 }]} rows={5} />
+        ) : contacts.length === 0 ? (
+          hasSearch ? (
+            <EmptyState
+              icon={<SearchGlyph />}
+              title={`No contacts match "${query.trim()}"`}
+              description="Try a different name, email, or company."
+              actions={<Button label="Clear search" variant="secondary" onClick={() => setQuery("")} />}
+            />
+          ) : (
+            <EmptyState
+              icon={<PeopleGlyph />}
+              title="No contacts yet"
+              description="Import recruiters from a CSV or Excel file, paste a list, or add one by hand to get started."
+              actions={
+                <HStack gap={2}>
+                  <Button as={Link} href="/contacts/import" label="Import contacts" variant="primary" />
+                  <Button label="Add manually" variant="secondary" onClick={() => { setEditing(undefined); setFormOpen(true); }} />
+                </HStack>
+              }
+            />
+          )
         ) : (
-          <EmptyState
-            icon={<PeopleGlyph />}
-            title="No contacts yet"
-            description="Import recruiters from a CSV or Excel file, paste a list, or add one by hand to get started."
-            actions={
-              <HStack gap={2}>
-                <Button as={Link} href="/contacts/import" label="Import contacts" variant="primary" />
-                <Button label="Add manually" variant="secondary" onClick={() => { setEditing(undefined); setFormOpen(true); }} />
+          <VStack gap={3}>
+            <Table
+              data={contacts}
+              columns={columns}
+              idKey="id"
+              density="compact"
+              dividers="rows"
+              hasHover
+              textOverflow="truncate"
+            />
+            {nextCursor && (
+              <HStack justify="center">
+                <Button label="Load more" variant="ghost" onClick={loadMore} isLoading={isLoadingMore} />
               </HStack>
-            }
-          />
-        )
-      ) : (
-        <VStack gap={3}>
-          <Table
-            data={contacts}
-            columns={columns}
-            idKey="id"
-            density="compact"
-            dividers="rows"
-            hasHover
-            textOverflow="truncate"
-          />
-          {nextCursor && (
-            <HStack justify="center">
-              <Button label="Load more" variant="ghost" onClick={loadMore} isLoading={isLoadingMore} />
-            </HStack>
-          )}
-        </VStack>
-      )}
+            )}
+          </VStack>
+        )}
+      </VStack>
 
       <ContactFormDialog isOpen={formOpen} onOpenChange={setFormOpen} contact={editing} onSaved={onSaved} />
       <AlertDialog

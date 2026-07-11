@@ -86,7 +86,18 @@ export function EmailAccountView() {
       </VStack>
 
       {status === null ? (
-        <Skeleton height={132} />
+        <Card padding={5}>
+          <HStack justify="between" align="center" gap={4}>
+            <VStack gap={2} align="stretch">
+              <HStack gap={2} align="center">
+                <Skeleton width={10} height={10} radius="rounded" />
+                <Skeleton width={90} height={14} radius={2} />
+              </HStack>
+              <Skeleton width={200} height={14} radius={2} />
+            </VStack>
+            <Skeleton width={110} height={38} radius={2} />
+          </HStack>
+        </Card>
       ) : status.connected ? (
         <Card padding={5}>
           <VStack gap={4}>

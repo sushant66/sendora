@@ -9,7 +9,7 @@ import { Heading } from "@astryxdesign/core/Heading";
 import { Text } from "@astryxdesign/core/Text";
 import { Button } from "@astryxdesign/core/Button";
 import { StatusDot } from "@astryxdesign/core/StatusDot";
-import { Skeleton } from "@astryxdesign/core/Skeleton";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { EmptyState } from "@astryxdesign/core/EmptyState";
 import { useToast } from "@astryxdesign/core/Toast";
 import { apiRequest } from "@/lib/api/client";
@@ -86,14 +86,14 @@ export function HistoryView() {
   ];
 
   return (
-    <VStack gap={5}>
+    <VStack gap={8}>
       <VStack gap={1}>
         <Heading level={1}>History</Heading>
         <Text color="secondary">Every email you&apos;ve sent, with its outcome.</Text>
       </VStack>
 
       {items === null ? (
-        <VStack gap={2}>{[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} height={44} />)}</VStack>
+        <TableSkeleton columns={[2, 2, 1.5, 1.5, 1.5]} rows={5} />
       ) : items.length === 0 ? (
         <EmptyState
           title="No emails sent yet"

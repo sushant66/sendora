@@ -91,18 +91,20 @@ export function RichTextEditor({
       <EditorStyles />
       <Text as="label" size="sm" weight="medium">{label}</Text>
       <VStack gap={0} align="stretch" className="sendora-rte">
-        <Toolbar
-          label={`${label} formatting`}
-          startContent={
-            <HStack gap={1}>
-              <ToggleButton label="Bold" isIconOnly icon={<BoldGlyph />} size="sm" isPressed={state.bold} onPressedChange={() => editor.chain().focus().toggleBold().run()} />
-              <ToggleButton label="Italic" isIconOnly icon={<ItalicGlyph />} size="sm" isPressed={state.italic} onPressedChange={() => editor.chain().focus().toggleItalic().run()} />
-              <ToggleButton label="Bulleted list" isIconOnly icon={<BulletListGlyph />} size="sm" isPressed={state.bulletList} onPressedChange={() => editor.chain().focus().toggleBulletList().run()} />
-              <ToggleButton label="Numbered list" isIconOnly icon={<OrderedListGlyph />} size="sm" isPressed={state.orderedList} onPressedChange={() => editor.chain().focus().toggleOrderedList().run()} />
-              <ToggleButton label="Link" isIconOnly icon={<LinkGlyph />} size="sm" isPressed={state.link} onPressedChange={openLink} />
-            </HStack>
-          }
-        />
+        <VStack align="stretch" className="sendora-rte-toolbar">
+          <Toolbar
+            label={`${label} formatting`}
+            startContent={
+              <HStack gap={1}>
+                <ToggleButton label="Bold" isIconOnly icon={<BoldGlyph />} size="sm" isPressed={state.bold} onPressedChange={() => editor.chain().focus().toggleBold().run()} />
+                <ToggleButton label="Italic" isIconOnly icon={<ItalicGlyph />} size="sm" isPressed={state.italic} onPressedChange={() => editor.chain().focus().toggleItalic().run()} />
+                <ToggleButton label="Bulleted list" isIconOnly icon={<BulletListGlyph />} size="sm" isPressed={state.bulletList} onPressedChange={() => editor.chain().focus().toggleBulletList().run()} />
+                <ToggleButton label="Numbered list" isIconOnly icon={<OrderedListGlyph />} size="sm" isPressed={state.orderedList} onPressedChange={() => editor.chain().focus().toggleOrderedList().run()} />
+                <ToggleButton label="Link" isIconOnly icon={<LinkGlyph />} size="sm" isPressed={state.link} onPressedChange={openLink} />
+              </HStack>
+            }
+          />
+        </VStack>
         {linkOpen && (
           <HStack gap={2} align="end" className="sendora-rte-linkbar">
             <TextInput
@@ -135,6 +137,12 @@ function EditorStyles() {
         overflow: hidden;
       }
       .sendora-rte:focus-within { box-shadow: var(--shadow-inset-selected); }
+      /* Astryx Toolbar is Section-based and bleeds via a negative block margin, meant to sit
+         inside a padded Section. Here it lives in a zero-padding, overflow-hidden box, so that
+         bleed clips the buttons at the top edge. Neutralize the bleed and give the toolbar its
+         own padded, bordered row so the controls read as a proper formatting toolbar. */
+      .sendora-rte-toolbar { padding: var(--spacing-1) var(--spacing-2); background: var(--color-background-muted); border-bottom: var(--border-width) solid var(--color-border); }
+      .sendora-rte-toolbar > * { margin: 0 !important; }
       .sendora-rte-linkbar { padding: var(--spacing-2) var(--spacing-3); border-bottom: var(--border-width) solid var(--color-border); }
       .sendora-rte-content { padding: var(--spacing-3) var(--spacing-4); min-height: calc(var(--spacing-12) * 4); outline: none; color: var(--color-text-primary); font-size: var(--font-size-base); line-height: 1.6; }
       .sendora-rte-content p { margin: 0 0 var(--spacing-2); }
