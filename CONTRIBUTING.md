@@ -21,8 +21,35 @@ the four core principles before contributing — reviewers enforce them.
 
 ## Workflow
 
-Features follow specify → plan → tasks → implement (Spec Kit). Design docs live in
-`specs/<feature>/`.
+### Feature development — use Spec Kit
+
+All feature work goes through **Spec Kit**. Do not start implementation from an ad-hoc
+branch or a loose description. Follow the flow and let it drive branch, docs, and tasks:
+
+```
+/speckit.specify   →   /speckit.plan   →   /speckit.tasks   →   /speckit.implement
+```
+
+- `/speckit.git.feature` creates the numbered feature branch; design docs live in
+  `specs/<feature>/` (spec, plan, research, data-model, contracts, quickstart).
+- Use `/speckit.clarify` before planning when the spec has open questions, and
+  `/speckit.analyze` to check cross-artifact consistency before implementing.
+- A change without a corresponding `specs/<feature>/` entry is not ready for review.
+
+### UI work — use impeccable, strictly
+
+Every UI change — new screens, components, layout, spacing, color, typography, motion,
+empty/error states, responsive behavior, accessibility, or copy polish — **must go through
+the `impeccable` skill.** This is not optional and not a fallback for "big" designs; it is
+the standard path for all interface work so the product stays visually coherent.
+
+- Do not hand-roll UI or eyeball styling. Drive it through `impeccable`, which composes
+  from **Astryx** components and our theme tokens (`lib/theme/`) and enforces the
+  accessibility and design-system rules below.
+- Never introduce ad-hoc colors, spacing, or `<div>`-based layout. See `DESIGN.md` and the
+  Astryx workflow in `CLAUDE.md`.
+
+### Quality gates
 
 ```bash
 pnpm typecheck && pnpm lint && pnpm test    # must be green before a PR
