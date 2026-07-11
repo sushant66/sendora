@@ -10,7 +10,7 @@ import { signInWithGoogle } from "@/app/actions/auth";
 import { BrandMark } from "@/components/app-icons";
 
 const REASSURANCES = [
-  "Sends from your own Gmail — replies land in your inbox",
+  "Sends from your own Gmail, so replies land in your inbox",
   "Only asks permission to send, never to read your mail",
   "Warns you before you re-contact someone",
 ];

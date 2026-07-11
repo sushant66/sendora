@@ -106,8 +106,8 @@ export function ContactsView() {
       width: proportional(2),
       renderCell: (row) => <Link href={`mailto:${row.email}`}>{row.email}</Link>,
     },
-    { key: "company", header: "Company", width: proportional(1.5), renderCell: (row) => row.company ?? "—" },
-    { key: "role", header: "Role", width: proportional(1.5), renderCell: (row) => row.role ?? "—" },
+    { key: "company", header: "Company", width: proportional(1.5), renderCell: (row) => row.company ?? "-" },
+    { key: "role", header: "Role", width: proportional(1.5), renderCell: (row) => row.role ?? "-" },
     {
       key: "actions",
       header: "",

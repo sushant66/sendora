@@ -121,12 +121,12 @@ export function ImportView() {
   }
 
   const columnOptions = (includeNone: boolean) => [
-    ...(includeNone ? [{ value: NONE, label: "— Not imported —" }] : []),
+    ...(includeNone ? [{ value: NONE, label: "Not imported" }] : []),
     ...(parsed?.columns ?? []).map((c) => ({ value: c, label: c })),
   ];
 
   return (
-    <VStack gap={5} style={{ maxWidth: 760 }}>
+    <VStack gap={5}>
       <VStack gap={1}>
         <HStack gap={2} align="center">
           <Link href="/contacts">

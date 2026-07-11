@@ -1,6 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { db as defaultDb, type Db } from "@/lib/db/client";
 import { recruiterContacts, sendBatches, sendRecords } from "@/lib/db/schema";
+import { NotFoundError } from "@/lib/errors";
 import { normalizeEmail } from "@/lib/validation/contacts";
 import type { SendRequest } from "@/lib/validation/send";
 import { renderTemplate } from "@/lib/templates/merge";
@@ -183,4 +184,85 @@ export async function sendEmails(
     reason: r.reason,
   }));
   return { batchId, total: recipients.length, sent, failed, results };
+}
+
+/**
+ * Resend an existing send record's immutable snapshot to the same recipient (US5 recovery).
+ * The content is already final (merge fields resolved at the original send), so it is sent
+ * verbatim — no re-render. Creates a new single-send batch + record, reusing the provider
+ * seam and active-account precondition. 404 if the record isn't the caller's; 409
+ * `no_active_account` if no Gmail is connected.
+ */
+export async function resendRecord(
+  userId: string,
+  recordId: string,
+  fromName: string | null,
+  opts: { db?: Db; provider?: EmailProvider } = {},
+): Promise<{ recordId: string; status: "sent" | "failed"; reason: string | null }> {
+  const db = opts.db ?? defaultDb;
+
+  const [rec] = await db
+    .select()
+    .from(sendRecords)
+    .where(and(eq(sendRecords.userId, userId), eq(sendRecords.id, recordId)))
+    .limit(1);
+  if (!rec) throw new NotFoundError();
+
+  const account = await getActiveAccount(userId, db);
+  const provider = opts.provider ?? resolveProvider(account.providerKey);
+
+  const [batch] = await db
+    .insert(sendBatches)
+    .values({ userId, connectedAccountId: account.row.id, templateId: null, kind: "single", total: 1, status: "in_progress" })
+    .returning();
+  const batchId = batch!.id;
+
+  let status: "sent" | "failed" = "failed";
+  let reason: string | null = null;
+  let providerMessageId: string | null = null;
+  let sentAt: Date | null = null;
+
+  const result = await provider.sendEmail(
+    {
+      fromEmail: account.row.emailAddress,
+      fromName: fromName ?? undefined,
+      to: rec.recipientEmail,
+      subject: rec.subject,
+      bodyHtml: rec.bodyHtml,
+      bodyText: rec.bodyText,
+    },
+    account.credentials,
+  );
+  if (result.status === "sent") {
+    status = "sent";
+    providerMessageId = result.providerMessageId;
+    sentAt = new Date();
+  } else {
+    reason = result.reason;
+    if (result.reason === REAUTH_REQUIRED) await markAccountExpired(account.row.id, db);
+  }
+
+  const [newRec] = await db
+    .insert(sendRecords)
+    .values({
+      userId,
+      batchId,
+      contactId: rec.contactId,
+      recipientEmail: rec.recipientEmail,
+      subject: rec.subject,
+      bodyHtml: rec.bodyHtml,
+      bodyText: rec.bodyText,
+      status,
+      failureReason: reason,
+      providerMessageId,
+      sentAt,
+    })
+    .returning();
+
+  await db
+    .update(sendBatches)
+    .set({ sentCount: status === "sent" ? 1 : 0, failedCount: status === "failed" ? 1 : 0, status: "completed", updatedAt: new Date() })
+    .where(eq(sendBatches.id, batchId));
+
+  return { recordId: newRec!.id, status, reason };
 }

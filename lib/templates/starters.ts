@@ -12,12 +12,12 @@ type StarterInput = { slug: string; name: string; subject: string; bodyHtml: str
 const STARTERS: StarterInput[] = [
   {
     slug: "intro-cold-outreach",
-    name: "Intro — cold outreach",
-    subject: "{{full_name}} — interested in roles at {{company}}",
+    name: "Intro: cold outreach",
+    subject: "{{full_name}}, interested in roles at {{company}}",
     bodyHtml:
       "<p>Hi {{first_name}},</p>" +
       "<p>I came across your work at {{company}} and wanted to reach out directly. I'm exploring new opportunities and would love to be considered for relevant roles you're hiring for.</p>" +
-      "<p>I've attached a short summary of my background. Happy to share more — would you be open to a quick chat?</p>" +
+      "<p>I've attached a short summary of my background. Happy to share more. Would you be open to a quick chat?</p>" +
       "<p>Thanks for your time,</p>",
   },
   {
@@ -34,10 +34,10 @@ const STARTERS: StarterInput[] = [
   {
     slug: "follow-up",
     name: "Polite follow-up",
-    subject: "Following up — {{role}} at {{company}}",
+    subject: "Following up on the {{role}} role at {{company}}",
     bodyHtml:
       "<p>Hi {{first_name}},</p>" +
-      "<p>Just following up on my note about the {{role}} role at {{company}}. I know things get busy — I remain very interested and would be glad to share anything that would help.</p>" +
+      "<p>Just following up on my note about the {{role}} role at {{company}}. I know things get busy, and I remain very interested and would be glad to share anything that would help.</p>" +
       "<p>Appreciate your consideration,</p>",
   },
 ];

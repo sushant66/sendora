@@ -1,0 +1,172 @@
+/*
+ * Marketing surface — "Focused Ink".
+ *
+ * This is the ONE art-directed exception to the app's neutral, system-following
+ * theme (see DESIGN.md). The landing page is a brand surface: a committed dark
+ * ink drench with a single warm-gold signal accent, distinct from the product's
+ * functional accent. Scoping is done by (a) forcing `color-scheme: dark` so every
+ * Astryx `light-dark()` token we DON'T override resolves to its coherent dark
+ * value, and (b) overriding the handful of tokens that carry the brand: the ink
+ * backgrounds, the warm off-white ink, and the gold accent. The app is untouched.
+ *
+ * All values are OKLCH so the ramp stays perceptually even. No raw hex outside
+ * this brand-definition file.
+ */
+
+.ink {
+  color-scheme: dark;
+
+  /* Ink surfaces — a deep, faintly-cool charcoal, deeper than the theme's default dark. */
+  --color-background-body: oklch(0.165 0.012 264);
+  --color-background-surface: oklch(0.205 0.013 264);
+  --color-background-card: oklch(0.205 0.013 264);
+  --color-background-muted: oklch(0.235 0.012 264);
+  --color-background-popover: oklch(0.225 0.013 264);
+
+  /* Hairlines carried as translucent light, so they read on any ink depth. */
+  --color-border: oklch(0.99 0 0 / 0.1);
+  --color-border-emphasized: oklch(0.99 0 0 / 0.18);
+
+  /* Warm off-white ink; secondary stays comfortably above 4.5:1 on the body. */
+  --color-text-primary: oklch(0.96 0.008 85);
+  --color-text-secondary: oklch(0.76 0.014 82);
+  --color-icon-primary: oklch(0.96 0.008 85);
+  --color-icon-secondary: oklch(0.76 0.014 82);
+
+  /* The brand gold now lives in the theme (lib/theme/neutralTheme.ts). This
+     surface forces color-scheme:dark below, so --color-accent / -accent-muted /
+     -on-accent / -icon-accent resolve to the theme's dark-slot gold (the exact
+     values this surface used to hard-code). We keep only text-accent gold here,
+     because the theme deliberately keeps accent-colored TEXT near-ink so it stays
+     legible on the light app; on this dark surface we want it gold. */
+  --color-text-accent: oklch(0.84 0.11 82);
+
+  --color-shadow: oklch(0 0 0 / 0.55);
+
+  background: var(--color-background-body);
+}
+
+/*
+ * A "lit screen": the product-preview cards render in LIGHT mode so a real email
+ * reads like an actual screen glowing against the ink. A warm gold-tinted bloom
+ * plus a deep drop shadow sells the light source.
+ */
+.litScreen {
+  color-scheme: light;
+  border-radius: var(--radius-lg, 12px);
+  box-shadow:
+    0 0 0 1px oklch(1 0 0 / 0.06),
+    0 2px 4px oklch(0 0 0 / 0.4),
+    0 24px 60px -30px oklch(0 0 0 / 0.7),
+    0 0 90px -24px oklch(0.81 0.128 78 / 0.28);
+}
+
+/*
+ * Soft ambient light behind the hero, so the ink isn't a flat void. Painted, not
+ * layout-affecting; sits under the content.
+ */
+.heroAura {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden; /* clip the bleeding aura so it never widens the page */
+}
+.heroAura::before {
+  content: "";
+  position: absolute;
+  inset: -20% -10% auto -10%;
+  height: 120%;
+  z-index: -1;
+  background:
+    radial-gradient(60% 70% at 78% 32%, oklch(0.81 0.128 78 / 0.14), transparent 70%),
+    radial-gradient(70% 80% at 12% 8%, oklch(0.55 0.06 264 / 0.35), transparent 65%);
+  pointer-events: none;
+}
+
+/* A faint top hairline of light where bands meet — a lit edge, not a hard border. */
+.litEdge {
+  border-top: 1px solid var(--color-border);
+  box-shadow: 0 -1px 0 oklch(0.81 0.128 78 / 0.05);
+}
+
+/*
+ * Viewport-safe two-column grid. Astryx's Grid `minWidth` compiles to
+ * minmax(<px>, 1fr) — a hard floor that overflows any viewport narrower than
+ * that floor. We drive columns off a media query instead: one column by default
+ * (never overflows), two above the tablet threshold, and it can't spill to a
+ * third the way auto-fit can. Copy always leads in source order, so a stacked
+ * mobile view reads text-first regardless of the desktop flip.
+ */
+.grid2 {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+}
+@media (min-width: 720px) {
+  .grid2 {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .flipDesktop > :first-child {
+    order: 2;
+  }
+}
+
+/* The single secondary affordance in the hero: text, not a button, so nothing
+   competes with the one gold CTA. Warms to the accent on hover. */
+.quietLink {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  transition: color var(--duration-fast, 175ms) var(--ease-standard, ease);
+}
+.quietLink:hover {
+  color: var(--color-text-accent);
+}
+
+/* Big gold section index for the flow — a real 3-step sequence, so numbers earn
+   their place. Uses the accent as a hairline ring, not a filled chip. */
+.stepIndex {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-accent);
+  line-height: 1;
+  font-weight: 600;
+}
+
+/*
+ * Motion — entrance choreography that ENHANCES an already-visible default.
+ * Content ships at full opacity; only motion-preferring contexts get the rise.
+ * This guarantees headless/reduced-motion renders never ship blank.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .rise {
+    opacity: 0;
+    animation: riseIn 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* The "Sent" badge lands last — an echo of the product's per-recipient result
+     landing. Slight overshoot-free pop. */
+  .sentLand {
+    opacity: 0;
+    animation: sentLand 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: 900ms;
+  }
+
+  @keyframes riseIn {
+    from {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes sentLand {
+    from {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.94);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}

@@ -45,7 +45,7 @@ export function EmailAccountView() {
 
   // Surface the OAuth round-trip outcome once, on return from Google.
   useEffect(() => {
-    if (params.get("connected")) toast({ body: "Gmail connected — you can send from your inbox now." });
+    if (params.get("connected")) toast({ body: "Gmail connected. You can send from your inbox now." });
     if (params.get("error")) toast({ body: "Couldn't connect Gmail. Please try again.", type: "error" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -81,7 +81,7 @@ export function EmailAccountView() {
         <Heading level={1}>Email account</Heading>
         <Text color="secondary">
           Connect your Gmail so outreach sends from your real address and replies come back to
-          your inbox. Sendora only requests permission to send — never to read your mail.
+          your inbox. Sendora only requests permission to send, never to read your mail.
         </Text>
       </VStack>
 

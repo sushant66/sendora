@@ -29,7 +29,8 @@ RULES:
 - Dense data = rows (Table, List/Item) edge-to-edge — never Card-wrapped list items. Card = dashboard widgets, galleries, settings groups only.
 - Status → StatusDot/Token; Badge only for counts and enumerated states, never decoration.
 - Custom styling: component props first; else style/className with tokens — var(--color-*|--spacing-*|--radius-*). No raw hex/px. (No StyleX/Tailwind compiler here — don't use xstyle/utility classes.)
-- Tokens for every value (`astryx docs tokens`). Brand/accent via `astryx theme` — never override --color-* in :root.
+- Tokens for every value (`astryx docs tokens`). Brand/accent live in our own theme at `lib/theme/neutralTheme.ts` (accent = warm gold). Edit that file, then `pnpm theme:build` to regenerate `lib/theme/neutral.{css,js}` (the app imports the built file; the source is client-only). Never override --color-* in :root.
+- Copy: no em-dashes (`—`) in any user-facing text or sent email content (Constitution V). Rewrite with a period, comma, connective, colon, or parentheses. Plain and human, never hype. (Applies to rendered copy and email bodies, not code comments.)
 
 MORE CLI:
   search "<query>"   find any component / hook / doc / template / block

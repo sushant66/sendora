@@ -79,7 +79,7 @@ export async function completeConnection(
   const { tokens } = await oauthClient().getToken(code);
   if (!tokens.refresh_token) {
     // Google omits the refresh token if the user previously consented without revoking.
-    throw new ConflictError("reconnect_required", "Google did not return a refresh token — revoke access and reconnect.");
+    throw new ConflictError("reconnect_required", "Google did not return a refresh token. Revoke access and reconnect.");
   }
   const scopes = (tokens.scope ?? GMAIL_SCOPE).split(" ").filter(Boolean);
   if (!scopes.includes(GMAIL_SCOPE)) throw new ForbiddenError("the gmail.send permission was not granted");

@@ -6,22 +6,21 @@ import { Badge } from "@astryxdesign/core/Badge";
 import { StatusDot } from "@astryxdesign/core/StatusDot";
 import { Divider } from "@astryxdesign/core/Divider";
 import { Avatar } from "@astryxdesign/core/Avatar";
+import styles from "@/app/(marketing)/marketing.module.css";
 
 /**
  * A faithful mockup of Sendora's send preview, used as the landing hero's
  * imagery. It mirrors the real product: a resolved (no literal {{tokens}})
  * one-to-one email, sent from the user's own inbox, with an honest outcome.
+ *
+ * On the ink landing it renders as a "lit screen" (see `.litScreen`): a real,
+ * light-mode email glowing against the dark surface, so the product itself is
+ * the hero image. The "Sent" badge lands last — an echo of how the app reports
+ * each per-recipient result as it settles.
  */
 export function ProductPreview() {
   return (
-    <Card
-      padding={0}
-      width="100%"
-      style={{
-        overflow: "hidden",
-        boxShadow: "0 32px 64px -40px var(--color-shadow), 0 8px 24px -20px var(--color-shadow)",
-      }}
-    >
+    <Card padding={0} width="100%" className={styles.litScreen}>
       <VStack gap={0}>
         <HStack justify="between" align="center" gap={3} padding={4}>
           <HStack gap={2} align="center" style={{ minWidth: 0 }}>
@@ -32,7 +31,9 @@ export function ProductPreview() {
               jordan.lee@northwind.co
             </Text>
           </HStack>
-          <Badge variant="success" label="Sent" />
+          <span className={styles.sentLand} style={{ display: "inline-flex" }}>
+            <Badge variant="success" label="Sent" />
+          </span>
         </HStack>
         <Divider variant="subtle" />
 
@@ -43,7 +44,7 @@ export function ProductPreview() {
             <Text color="secondary">
               I noticed Northwind is hiring a Senior Frontend Engineer. I&apos;ve spent the last
               five years building design-system-driven React apps, and the role looks like a
-              genuine fit — I&apos;d love to hear more.
+              genuine fit, and I&apos;d love to hear more.
             </Text>
             <Text color="secondary">Would a short call next week work?</Text>
           </VStack>

@@ -26,11 +26,16 @@ went out.
 ## Brand Personality
 
 Calm, confidence-building, precise. Three words: **composed, trustworthy, deliberate.**
-The interface should lower the user's stress, not add to it — quiet surfaces, clear next
+The interface should lower the user's stress, not add to it: quiet surfaces, clear next
 steps, honest feedback. Craft and precision in the vein of Linear (crisp, keyboard-
 friendly, restrained), but paced calmer: a little more breathing room than Linear's
-densest views, no urgency theater. The voice is plain and human — it explains what
-happened and what to do next, never hypes.
+densest views, no urgency theater. The voice is plain and human: it explains what
+happened and what to do next, and never hypes.
+
+**No em-dashes.** User-facing copy and the content of emails Sendora sends never use the
+em-dash (`—`); it reads as machine-generated and breaks the plain, human tone. Rewrite
+with a period, a comma, a plain connective ("so", "and"), a colon, or parentheses
+instead. (Constitution Principle V.)
 
 ## Anti-references
 

@@ -1,3 +1,4 @@
+import type { ReactElement, SVGProps } from "react";
 import { VStack } from "@astryxdesign/core/VStack";
 import { HStack } from "@astryxdesign/core/HStack";
 import { Heading } from "@astryxdesign/core/Heading";
@@ -7,16 +8,19 @@ import { StatusDot } from "@astryxdesign/core/StatusDot";
 import { Divider } from "@astryxdesign/core/Divider";
 import { Icon } from "@astryxdesign/core/Icon";
 import { Banner } from "@astryxdesign/core/Banner";
+import { List } from "@astryxdesign/core/List";
+import { Item } from "@astryxdesign/core/Item";
 import { LinkButton } from "@/components/ui/link-button";
+import { ComposeIcon, ContactsIcon, TemplatesIcon, HistoryIcon } from "@/components/app-icons";
 import type { CurrentUser } from "@/lib/auth/session";
 import type { AccountStatus } from "@/lib/email/types";
-import type { HistoryItem } from "@/lib/history/types";
+import type { HistoryRecord } from "@/lib/history/types";
 
 type Props = {
   user: CurrentUser;
   account: AccountStatus;
   hasContacts: boolean;
-  recent: HistoryItem[];
+  recent: HistoryRecord[];
   hasSent: boolean;
 };
 
@@ -43,7 +47,7 @@ export function DashboardView({ user, account, hasContacts, recent, hasSent }: P
     },
     {
       title: "Add your recruiters",
-      description: "Import a CSV or paste a list — or add contacts by hand.",
+      description: "Import a CSV, paste a list, or add contacts by hand.",
       done: hasContacts,
       href: "/contacts/import",
       cta: "Import contacts",
@@ -103,7 +107,7 @@ export function DashboardView({ user, account, hasContacts, recent, hasSent }: P
             <VStack gap={1}>
               <Heading level={2}>Get set up</Heading>
               <Text type="supporting">
-                {doneCount} of {steps.length} done — three quick steps to your first sent email.
+                {doneCount} of {steps.length} done. Three quick steps to your first sent email.
               </Text>
             </VStack>
             <VStack gap={0}>
@@ -122,7 +126,79 @@ export function DashboardView({ user, account, hasContacts, recent, hasSent }: P
       )}
 
       <RecentActivity recent={recent} />
+
+      {allSetUp && <QuickActions />}
     </VStack>
+  );
+}
+
+const QUICK_ACTIONS = [
+  {
+    href: "/compose",
+    glyph: ComposeIcon,
+    title: "Compose an email",
+    description: "Send personalized outreach to your recruiters.",
+  },
+  {
+    href: "/contacts",
+    glyph: ContactsIcon,
+    title: "Contacts",
+    description: "Add or update the recruiters you reach out to.",
+  },
+  {
+    href: "/templates",
+    glyph: TemplatesIcon,
+    title: "Templates",
+    description: "Edit the reusable emails you send.",
+  },
+  {
+    href: "/history",
+    glyph: HistoryIcon,
+    title: "History",
+    description: "See every email you've sent and its outcome.",
+  },
+] as const;
+
+// The "all set" home would otherwise collapse to a header and one activity row,
+// leaving the page stranded at the top. A calm launcher of real destinations
+// gives it body and a next move, without inventing vanity metrics.
+function QuickActions() {
+  return (
+    <VStack gap={3}>
+      <Heading level={2}>Quick actions</Heading>
+      <List hasDividers>
+        {QUICK_ACTIONS.map((a) => (
+          <Item
+            key={a.href}
+            href={a.href}
+            startContent={<ActionIcon glyph={a.glyph} />}
+            label={a.title}
+            description={a.description}
+            descriptionLines={1}
+            endContent={<Icon icon="chevronRight" size="sm" color="secondary" />}
+          />
+        ))}
+      </List>
+    </VStack>
+  );
+}
+
+function ActionIcon({ glyph: Glyph }: { glyph: (props: SVGProps<SVGSVGElement>) => ReactElement }) {
+  return (
+    <HStack
+      align="center"
+      justify="center"
+      style={{
+        width: 32,
+        height: 32,
+        flexShrink: 0,
+        borderRadius: "var(--radius-element)",
+        background: "var(--color-background-muted)",
+        color: "var(--color-text-secondary)",
+      }}
+    >
+      <Glyph width={16} height={16} />
+    </HStack>
   );
 }
 
@@ -226,13 +302,13 @@ function StepMarker({ done, active, n }: { done: boolean; active: boolean; n: nu
   );
 }
 
-const STATUS: Record<HistoryItem["status"], { variant: "success" | "error" | "neutral"; label: string }> = {
+const STATUS: Record<HistoryRecord["status"], { variant: "success" | "error" | "neutral"; label: string }> = {
   sent: { variant: "success", label: "Sent" },
   failed: { variant: "error", label: "Failed" },
   pending: { variant: "neutral", label: "Pending" },
 };
 
-function RecentActivity({ recent }: { recent: HistoryItem[] }) {
+function RecentActivity({ recent }: { recent: HistoryRecord[] }) {
   return (
     <VStack gap={3}>
       <HStack justify="between" align="center">

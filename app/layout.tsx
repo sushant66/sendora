@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import { Theme } from "@astryxdesign/core/theme";
 import { LayerProvider } from "@astryxdesign/core/Layer";
-import { neutralTheme } from "@astryxdesign/theme-neutral/built";
+// Our editable theme, compiled by `pnpm exec astryx theme build lib/theme/neutralTheme.ts`.
+// Import the built artifact (server-safe), not the defineTheme source (client-only).
+import { neutralTheme } from "@/lib/theme/neutral";
 // Astryx base styles (required — components render unstyled without these).
 import "@astryxdesign/core/reset.css";
 import "@astryxdesign/core/astryx.css";
+// Theme tokens (our gold-accent neutral theme). After base, before our overrides.
+import "@/lib/theme/neutral.css";
 // Design-system overrides — must load after Astryx so they take precedence.
 import "./globals.css";
 

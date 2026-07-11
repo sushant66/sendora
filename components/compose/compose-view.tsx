@@ -250,7 +250,7 @@ export function ComposeView() {
               {contactIds.length === 0
                 ? "No recipients selected"
                 : isBulk
-                  ? `${contactIds.length} recruiters — each gets a separate, personalized email`
+                  ? `${contactIds.length} recruiters, each gets a separate, personalized email`
                   : "1 recruiter"}
             </Text>
             <Button
@@ -336,7 +336,7 @@ function SendResultPanel({
         title={
           allSent
             ? `Sent to ${result.sent} recruiter${result.sent === 1 ? "" : "s"}`
-            : `Sent ${result.sent} of ${result.total} — ${result.failed} failed`
+            : `Sent ${result.sent} of ${result.total}, ${result.failed} failed`
         }
         description={allSent ? "Each recruiter received their own personalized email." : "Successful sends were kept; failed ones are listed below."}
         endContent={<Button as={Link} href="/history" label="View history" variant="secondary" />}

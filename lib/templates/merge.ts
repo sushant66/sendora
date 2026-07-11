@@ -46,11 +46,11 @@ function resolve(token: MergeToken, contact: MergeContact): { value: string; war
       return { value: parts.slice(1).join(" ") };
     case "company": {
       const v = contact.company?.trim() ?? "";
-      return v ? { value: v } : { value: "", warning: { field: "company", message: "No company on this contact — the {{company}} field was left blank." } };
+      return v ? { value: v } : { value: "", warning: { field: "company", message: "No company on this contact, so the {{company}} field was left blank." } };
     }
     case "role": {
       const v = contact.role?.trim() ?? "";
-      return v ? { value: v } : { value: "", warning: { field: "role", message: "No role on this contact — the {{role}} field was left blank." } };
+      return v ? { value: v } : { value: "", warning: { field: "role", message: "No role on this contact, so the {{role}} field was left blank." } };
     }
   }
 }

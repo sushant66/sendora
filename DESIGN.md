@@ -9,25 +9,33 @@
 
 ## Theme
 
-- **Base theme**: `@astryxdesign/theme-neutral` (`neutralTheme`), applied once in
-  `app/layout.tsx` via `<Theme theme={neutralTheme} mode="system">`. Light + dark both
-  ship; `mode="system"` follows the OS. Every color below is a `light-dark()` token, so
-  dark mode is automatic — do not fork styles per mode.
-- **Body background** `--color-background-body` (`#F1F4F7` light) is a cool neutral, not a
-  warm cream — deliberately off the AI-cream default. **Surfaces** (`--color-background-surface`,
-  `--color-background-card`, white) sit above it; the body/surface contrast is the primary
-  way we separate the shell (nav, toolbars) from content.
-- **Radius multiplier / density**: theme defaults. Do not override `--color-*` in `:root`;
-  rebrand via `astryx theme` if ever needed.
+- **Base theme**: our own editable copy of Astryx's `neutral` theme, source at
+  `lib/theme/neutralTheme.ts`, compiled with `pnpm theme:build` to `lib/theme/neutral.{css,js}`
+  and imported once in `app/layout.tsx` via `<Theme theme={neutralTheme} mode="system">`
+  plus `import "@/lib/theme/neutral.css"`. Light + dark both ship; `mode="system"` follows
+  the OS. Every color is a `light-dark()` token, so dark mode is automatic — do not fork
+  styles per mode.
+- **Changing brand tokens is a single-file edit**: edit `lib/theme/neutralTheme.ts`, then
+  run `pnpm theme:build` to regenerate the artifact (the app imports the *built* file, not
+  the `defineTheme` source, which is client-only). Never override `--color-*` in `:root`.
+- **Body background** `--color-background-body` (`#f1f1f1` light / `#1b1b1b` dark) is a
+  neutral canvas. **Surfaces** (`--color-background-surface`, `--color-background-card`,
+  white in light) sit above it; the body/surface contrast is the primary way we separate
+  the shell (nav, toolbars) from content.
 
 ## Color
 
 Strategy: **Restrained** (product floor). A near-neutral surface, one accent, semantic
 status colors used only to mean something.
 
-- **Accent** `--color-accent` (`#0064E0`, a confident blue) is reserved for **primary
-  actions, the current selection, and state indicators** — never decoration. Exactly one
-  primary button per view.
+- **Accent** `--color-accent` is a **warm brand gold**, tuned per mode: light
+  `oklch(0.64 0.14 66)` (a deep ochre that clears WCAG AA on white — 3.48:1 block,
+  5.16:1 label) and dark `oklch(0.81 0.128 78)` (the bright gold, shared with the
+  marketing surface — 8.5:1 label). It is the single source of truth for CTAs and is
+  reserved for **primary actions, the current selection, and state indicators** — never
+  decoration. Exactly one primary button per view. `--color-on-accent` carries the label
+  (near-ink), and `--color-text-accent` stays near-ink (not gold) so accent-colored *text*
+  stays legible on light surfaces. Change it in `lib/theme/neutralTheme.ts` + `pnpm theme:build`.
 - **Text**: `--color-text-primary` for body/headings, `--color-text-secondary` for
   supporting/metadata. Never drop body text below `--color-text-secondary` for contrast
   reasons (≥4.5:1 is required; secondary already meets it on our surfaces).

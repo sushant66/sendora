@@ -80,7 +80,7 @@ export function TemplatesView() {
       width: proportional(1.5),
       renderCell: (t) => (
         <Text color="secondary" size="sm">
-          {t.mergeFields.length ? t.mergeFields.map((f) => `{{${f}}}`).join(" ") : "—"}
+          {t.mergeFields.length ? t.mergeFields.map((f) => `{{${f}}}`).join(" ") : "-"}
         </Text>
       ),
     },
