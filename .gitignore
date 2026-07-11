@@ -1,0 +1,41 @@
+# Dependencies
+/node_modules
+.pnpm-store/
+
+# Next.js
+/.next/
+/out/
+next-env.d.ts
+
+# Production build
+/build
+/dist
+
+# Environment / secrets (NEVER commit)
+.env
+.env.*
+!.env.example
+
+# Testing
+/coverage
+/playwright-report/
+/test-results/
+/.playwright/
+
+# Drizzle
+/drizzle/meta/_journal.json.bak
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# TypeScript
+*.tsbuildinfo

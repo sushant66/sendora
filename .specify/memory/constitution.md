@@ -1,15 +1,17 @@
 <!--
 Sync Impact Report
 ==================
-Version change: [TEMPLATE / unversioned] → 1.0.0
-Bump rationale: Initial ratification — first concrete constitution replacing the
-                unfilled template. MAJOR baseline established.
+Version change: 1.0.0 → 1.1.0
+Bump rationale: Amendment. Added Principle V (Plain, Human Copy), which bans the
+                em-dash in all user-facing copy and sent email content. MINOR: a
+                new principle was added; the four existing principles are unchanged.
 
-Principles defined (4):
-  - I.   Type Safety & Simplicity (new)
-  - II.  Test-First (NON-NEGOTIABLE) (new)
-  - III. Accessibility by Default (new)
-  - IV.  UX Consistency via Design System (new)
+Principles defined (5):
+  - I.   Type Safety & Simplicity
+  - II.  Test-First (NON-NEGOTIABLE)
+  - III. Accessibility by Default
+  - IV.  UX Consistency via Design System
+  - V.   Plain, Human Copy (added v1.1.0)
 
 Sections defined:
   - Technology Stack & Constraints (new)
@@ -21,6 +23,11 @@ Templates reviewed:
                                                   references constitution generically)
   - .specify/templates/spec-template.md ....... ✅ aligned (no principle-specific references)
   - .specify/templates/tasks-template.md ...... ✅ aligned (no principle-specific references)
+
+Propagation (v1.1.0):
+  - PRODUCT.md .... ✅ Brand Personality voice section carries the em-dash ban.
+  - CLAUDE.md ..... ✅ agent guidance notes the em-dash ban for generated copy.
+  - DESIGN.md ..... ✅ no change needed (copy is a voice rule, not a design token).
 
 Deferred / follow-up TODOs:
   - Deliverability & anti-spam compliance (CAN-SPAM/GDPR) and Data Privacy & PII
@@ -94,6 +101,23 @@ Astryx tokens. When a needed pattern does not exist in the system, extend the sy
 multiply, makes dark mode and rebranding trivial, and prevents the visual drift that
 one-off styles accumulate over time.
 
+### V. Plain, Human Copy
+
+All user-facing copy MUST be plain, human, and honest: it explains what happened and
+what to do next, and never hypes. This governs interface text, empty and error states,
+and the content of emails Sendora sends on a user's behalf.
+
+The em-dash (`—`) MUST NOT appear in any user-facing copy or in sent email content
+(including starter and user templates). Rewrite for clarity instead: split the sentence
+with a period, join clauses with a comma or a plain connective ("so", "and"), introduce
+with a colon, or set an aside in parentheses. This is a voice rule for rendered product
+text and email bodies; it does not govern source-code comments.
+
+**Rationale**: The voice is part of what makes Sendora trustworthy (see PRODUCT.md).
+Em-dashes read as machine-generated and undercut the plain, considered tone a job seeker
+is putting their own name behind. Banning them keeps the copy sounding like a person
+wrote it, one clear sentence at a time.
+
 ## Technology Stack & Constraints
 
 The ratified stack is fixed unless amended through Governance:
@@ -118,7 +142,7 @@ Additional constraints:
   implement. The plan's Constitution Check gate MUST pass before implementation
   begins and be re-checked after design.
 - **Quality gates before merge**: TypeScript type-check passes with zero errors;
-  all tests (unit + integration) pass; the change conforms to the four Core
+  all tests (unit + integration) pass; the change conforms to the five Core
   Principles. A change that violates a principle MUST NOT merge until the violation
   is removed or justified in Complexity Tracking.
 - **Reviews**: Every change is reviewed against this constitution. Reviewers MUST
@@ -148,4 +172,4 @@ convention conflicts with a principle here, the principle wins.
   Privacy & PII Protection (encryption, least-privilege access, retention limits) as
   first-class principles.
 
-**Version**: 1.0.0 | **Ratified**: 2026-07-11 | **Last Amended**: 2026-07-11
+**Version**: 1.1.0 | **Ratified**: 2026-07-11 | **Last Amended**: 2026-07-11
