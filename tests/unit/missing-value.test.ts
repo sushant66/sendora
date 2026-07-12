@@ -67,6 +67,18 @@ describe("computeMissingValues", () => {
     expect(r.representativeContactId).toBe("c1");
   });
 
+  it("does not flag {{my_name}} when it resolves via the account-name fallback (FR-001)", () => {
+    const r = computeMissingValues({
+      subject: "A note from {{my_name}}",
+      bodyHtml: "<p>I'm a {{my_title}}</p>",
+      contacts: [CONTACTS[0]!],
+      profile: makeEmptyProfile(),
+      accountName: "Sushant Kadam",
+    });
+    // my_name falls back to the account name, so it is not missing; my_title still is.
+    expect(r.senderMissing).toEqual(["my_title"]);
+  });
+
   it("returns no missing when the selection is empty", () => {
     const r = computeMissingValues({ subject: "{{company}}", bodyHtml: "", contacts: [], profile: makeProfile() });
     expect(r.hasMissing).toBe(false);

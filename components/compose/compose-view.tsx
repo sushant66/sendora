@@ -37,7 +37,7 @@ type TestSendResult = { status: "sent" | "failed"; toEmail?: string; reason?: st
 
 const PREVIEW_DEBOUNCE_MS = 350;
 
-export function ComposeView() {
+export function ComposeView({ senderName = null }: { senderName?: string | null }) {
   const toast = useToast();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -180,7 +180,7 @@ export function ComposeView() {
   /** Send-time gate (FR-016): if a used field would resolve empty, show how it reads and
    *  require an explicit confirm; otherwise send straight through. */
   async function attemptSend() {
-    const report = computeMissingValues({ subject, bodyHtml, contacts: selectedContacts, profile });
+    const report = computeMissingValues({ subject, bodyHtml, contacts: selectedContacts, profile, accountName: senderName });
     if (!report.hasMissing) {
       void send();
       return;
@@ -487,7 +487,7 @@ function MissingValueGate({
           <Text size="sm" weight="medium">
             How one of these emails reads
           </Text>
-          <EmailPreview preview={preview} fromEmail={fromEmail} toEmail={toEmail} isEmpty={!preview} />
+          <EmailPreview preview={preview} fromEmail={fromEmail} toEmail={toEmail} isEmpty={!preview} hideWarnings />
         </VStack>
 
         <HStack justify="end" gap={2}>

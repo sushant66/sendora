@@ -1,4 +1,5 @@
-import { extractTokens, SENDER_TOKENS } from "@/lib/templates/merge";
+import { extractTokens, SENDER_TOKENS, type SenderContext } from "@/lib/templates/merge";
+import { senderContextFromProfile } from "@/lib/profile/context";
 import type { SenderProfile } from "@/lib/profile/types";
 
 /**
@@ -20,7 +21,7 @@ export type MissingValueContact = {
 /** Recipient tokens that drop with a warning when empty (identity tokens never do). */
 const RECIPIENT_WARNABLE = new Set(["company", "role"]);
 
-const SENDER_FIELD: Record<string, keyof SenderProfile> = {
+const SENDER_FIELD: Record<string, keyof SenderContext> = {
   my_name: "displayName",
   my_title: "title",
   my_pitch: "pitch",
@@ -54,13 +55,18 @@ export function computeMissingValues(input: {
   bodyHtml: string;
   contacts: MissingValueContact[];
   profile: SenderProfile | null;
+  /** The account name used as the {{my_name}} fallback, so the gate matches what actually
+   *  sends (the render falls the display name back to this before flagging it empty, FR-001). */
+  accountName?: string | null;
 }): MissingValueReport {
   const used = [...new Set([...extractTokens(input.subject), ...extractTokens(input.bodyHtml)])];
   const recipientTokens = used.filter((t) => RECIPIENT_WARNABLE.has(t));
   const usedSender = used.filter((t) => (SENDER_TOKENS as readonly string[]).includes(t));
 
-  const profile = input.profile;
-  const senderMissing = usedSender.filter((t) => isBlank(profile ? (profile[SENDER_FIELD[t]!] as string | null) : null));
+  // Evaluate sender emptiness against the SAME resolved context the send/preview use, so a
+  // field that resolves via a fallback (my_name → account name) is never falsely flagged.
+  const sender = senderContextFromProfile(input.profile, input.accountName ?? null);
+  const senderMissing = usedSender.filter((t) => isBlank(sender[SENDER_FIELD[t]!] as string | null));
 
   const affected = input.contacts
     .map((c) => ({

@@ -19,11 +19,15 @@ export function EmailPreview({
   fromEmail,
   toEmail,
   isEmpty,
+  hideWarnings = false,
 }: {
   preview: TemplatePreview | null;
   fromEmail?: string;
   toEmail?: string;
   isEmpty: boolean;
+  /** Suppress the per-recipient warning banner when a caller already summarizes them
+   *  (e.g. the pre-send gate shows one summary above this preview). */
+  hideWarnings?: boolean;
 }) {
   return (
     <Card padding={5}>
@@ -49,7 +53,7 @@ export function EmailPreview({
               // Safe: preview.bodyHtml is server-sanitized by /api/templates/preview (lib/sanitize).
               dangerouslySetInnerHTML={{ __html: preview.bodyHtml }}
             />
-            {preview.warnings.length > 0 && (
+            {!hideWarnings && preview.warnings.length > 0 && (
               <Banner
                 status="warning"
                 container="card"

@@ -79,10 +79,12 @@ export function ProfileView({
   const displayNameHint =
     accountName && !form.displayName.trim()
       ? `Defaults to your account name, ${accountName}, if left blank.`
-      : "The name your recruiters see, and the {{your name}} field.";
+      : "Shown to recruiters, and fills the Your name merge field.";
 
   return (
-    <VStack gap={6}>
+    // A focused single-column measure: a settings form reads better at ~600px than stretched
+    // across the full content width, and stays centered rather than clinging to one edge.
+    <VStack gap={6} style={{ width: "100%", maxWidth: 600, marginInline: "auto" }}>
       <VStack gap={1}>
         <Heading level={1}>Your profile</Heading>
         <Text color="secondary">
