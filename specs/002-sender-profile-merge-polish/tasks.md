@@ -188,12 +188,12 @@ cleanly if built first.
 
 ### Tests (write first, must fail)
 
-- [ ] T052 [P] [US5] E2E: setup order shows import + rendered template before the Gmail prompt; profile optional; Gmail prompt at first send, in `tests/e2e/onboarding.spec.ts`
+- [X] T052 [P] [US5] E2E: setup order shows import + rendered template before the Gmail prompt; profile optional; Gmail prompt at first send, in `tests/e2e/onboarding.spec.ts`
 
 ### Implementation
 
-- [ ] T053 [US5] Reorder the dashboard "Get set up" steps (import, then personalize/profile, then first send), add the optional profile step, and ensure the personalize step surfaces a **real rendered template preview reachable without a connected inbox** so a rendered template is seen before any Gmail prompt (SC-007, U1), built **through `/impeccable`**, in `components/dashboard/dashboard-view.tsx`
-- [ ] T054 [US5] Confirm the Gmail connection prompt surfaces at first send (compose gating copy), in `components/compose/compose-view.tsx`
+- [X] T053 [US5] Reorder the dashboard "Get set up" steps (import, then personalize/profile, then first send), add the optional profile step, and ensure the personalize step surfaces a **real rendered template preview reachable without a connected inbox** so a rendered template is seen before any Gmail prompt (SC-007, U1), built **through `/impeccable`**, in `components/dashboard/dashboard-view.tsx`
+- [X] T054 [US5] Confirm the Gmail connection prompt surfaces at first send (compose gating copy), in `components/compose/compose-view.tsx`
 
 **Checkpoint**: All five stories independently functional.
 
