@@ -30,8 +30,8 @@ independently.
 
 **Purpose**: Bring in the one new dependency and shared test scaffolding.
 
-- [ ] T001 Add `@tiptap/suggestion` to dependencies in `package.json` and install (pnpm)
-- [ ] T002 [P] Add test factories for `SenderProfile` and soft-deleted contacts in `tests/factories/`
+- [X] T001 Add `@tiptap/suggestion` to dependencies in `package.json` and install (pnpm)
+- [X] T002 [P] Add test factories for `SenderProfile` and soft-deleted contacts in `tests/factories/`
 
 ---
 
@@ -43,12 +43,12 @@ picker, and the missing-value gate all share one contract.
 **Note**: US4 (bulk contacts) and US5 (onboarding) do NOT depend on this phase and may start
 right after Setup.
 
-- [ ] T003 [P] Unit tests for sender-field rendering, per-field empty warnings, and 0 literal placeholders (both namespaces) in `tests/unit/merge.sender.test.ts`
-- [ ] T004 [P] Unit tests for template save-time validation accepting the sender namespace and rejecting unknown tokens in `tests/unit/templates.validation.test.ts`
-- [ ] T005 Extend `MERGE_TOKENS` with the sender namespace (`my_name`, `my_title`, `my_pitch`, `my_skills`, `my_link`, `my_location`, `my_work_preference`) and resolve them in `lib/templates/merge.ts`
-- [ ] T006 Extend the render signature to accept a sender context (profile) alongside the contact, keeping total render + warnings, in `lib/templates/merge.ts` (depends T005)
-- [ ] T007 [P] Create the shared merge-field descriptor list (`{ token, label, group }`, recipient + sender) in `lib/templates/fields.ts`
-- [ ] T008 Update template save-time validation to accept both namespaces in `lib/validation/templates.ts` and `lib/templates/service.ts` (depends T005)
+- [X] T003 [P] Unit tests for sender-field rendering, per-field empty warnings, and 0 literal placeholders (both namespaces) in `tests/unit/merge.sender.test.ts`
+- [X] T004 [P] Unit tests for template save-time validation accepting the sender namespace and rejecting unknown tokens in `tests/unit/templates.validation.test.ts`
+- [X] T005 Extend `MERGE_TOKENS` with the sender namespace (`my_name`, `my_title`, `my_pitch`, `my_skills`, `my_link`, `my_location`, `my_work_preference`) and resolve them in `lib/templates/merge.ts`
+- [X] T006 Extend the render signature to accept a sender context (profile) alongside the contact, keeping total render + warnings, in `lib/templates/merge.ts` (depends T005)
+- [X] T007 [P] Create the shared merge-field descriptor list (`{ token, label, group }`, recipient + sender) in `lib/templates/fields.ts`
+- [X] T008 Update template save-time validation to accept both namespaces in `lib/validation/templates.ts` and `lib/templates/service.ts` (depends T005)
 
 **Checkpoint**: Merge engine supports both namespaces; US1/US2/US3 can begin.
 

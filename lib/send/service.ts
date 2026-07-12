@@ -73,7 +73,7 @@ export async function runSendLoop(
   let accountDisabled = false;
 
   for (const contact of recipients) {
-    const rendered = renderTemplate(base, { name: contact.name, company: contact.company, role: contact.role });
+    const rendered = renderTemplate(base, { contact: { name: contact.name, company: contact.company, role: contact.role } });
     const record: RenderedSend = {
       contactId: contact.id,
       recipientEmail: contact.email,

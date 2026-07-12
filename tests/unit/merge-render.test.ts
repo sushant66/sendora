@@ -12,22 +12,20 @@ const ADA = { name: "Ada Lovelace", company: "Analytical Engines", role: "Lead R
 
 describe("renderString", () => {
   it("resolves identity + optional tokens from the contact", () => {
-    const { text, warnings } = renderString("Hi {{first_name}} at {{company}} ({{role}})", ADA);
+    const { text, warnings } = renderString("Hi {{first_name}} at {{company}} ({{role}})", { contact: ADA });
     expect(text).toBe("Hi Ada at Analytical Engines (Lead Recruiter)");
     expect(warnings).toEqual([]);
   });
 
   it("derives first/last/full name from the single name field", () => {
-    expect(renderString("{{first_name}}|{{last_name}}|{{full_name}}", ADA).text).toBe(
+    expect(renderString("{{first_name}}|{{last_name}}|{{full_name}}", { contact: ADA }).text).toBe(
       "Ada|Lovelace|Ada Lovelace",
     );
   });
 
   it("never leaves a literal placeholder and warns on empty optional fields (FR-012, SC-004)", () => {
     const { text, warnings } = renderString("Hi {{first_name}}, saw the {{role}} role at {{company}}.", {
-      name: "Grace Hopper",
-      company: null,
-      role: null,
+      contact: { name: "Grace Hopper", company: null, role: null },
     });
     expect(text).toBe("Hi Grace, saw the  role at .");
     expect(text).not.toMatch(/\{\{.*\}\}/);
@@ -35,11 +33,11 @@ describe("renderString", () => {
   });
 
   it("falls back to a greeting word when the name is blank", () => {
-    expect(renderString("Hi {{first_name}}", { name: "" }).text).toBe("Hi there");
+    expect(renderString("Hi {{first_name}}", { contact: { name: "" } }).text).toBe("Hi there");
   });
 
   it("drops unknown tokens with a warning (defense in depth)", () => {
-    const { text, warnings } = renderString("Hi {{first_name}} {{salary}}", ADA);
+    const { text, warnings } = renderString("Hi {{first_name}} {{salary}}", { contact: ADA });
     expect(text).toBe("Hi Ada ");
     expect(text).not.toMatch(/\{\{.*\}\}/);
     expect(warnings[0]?.field).toBe("salary");
@@ -51,7 +49,7 @@ describe("renderTemplate HTML escaping (stored-XSS guard)", () => {
     const evil = { name: '<img src=x onerror="alert(1)">', company: "A & B <script>", role: null };
     const out = renderTemplate(
       { subject: "Hi {{full_name}}", bodyHtml: "<p>Hi {{full_name}} at {{company}}</p>", bodyText: "Hi {{full_name}}" },
-      evil,
+      { contact: evil },
     );
     // HTML body: markup from the contact is neutralized.
     expect(out.bodyHtml).not.toContain("<img");
@@ -70,7 +68,7 @@ describe("renderTemplate", () => {
   it("renders subject + both body parts and merges warnings", () => {
     const out = renderTemplate(
       { subject: "Role at {{company}}", bodyHtml: "<p>Hi {{first_name}}</p>", bodyText: "Hi {{first_name}}" },
-      { name: "Ada Lovelace", company: null, role: null },
+      { contact: { name: "Ada Lovelace", company: null, role: null } },
     );
     expect(out.subject).toBe("Role at ");
     expect(out.bodyHtml).toBe("<p>Hi Ada</p>");

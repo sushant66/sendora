@@ -27,9 +27,7 @@ export async function previewTemplate(
 
   const base = await resolveContent(userId, request, db);
   const rendered = renderTemplate(base, {
-    name: contact.name,
-    company: contact.company,
-    role: contact.role,
+    contact: { name: contact.name, company: contact.company, role: contact.role },
   });
 
   return {
