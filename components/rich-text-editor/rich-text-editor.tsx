@@ -176,8 +176,8 @@ function EditorStyles() {
         outline: var(--border-width) solid var(--color-text-accent);
         outline-offset: 1px;
       }
-      /* Slash menu popup (portaled to <body>, positioned at the caret). */
-      .sendora-slash-popup { position: absolute; z-index: 60; }
+      /* Slash menu popup (mounted at the caret; inside the <dialog> top layer when in one). */
+      .sendora-slash-popup { position: fixed; z-index: 2000; }
       .sendora-slash-menu {
         list-style: none;
         margin: 0;

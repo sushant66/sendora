@@ -169,8 +169,10 @@ export const MergeSuggestion = Extension.create({
             if (!popup || !clientRect) return;
             const rect = clientRect();
             if (!rect) return;
-            popup.style.left = `${rect.left + window.scrollX}px`;
-            popup.style.top = `${rect.bottom + window.scrollY + 4}px`;
+            // Fixed positioning at the caret (viewport coords), so it is correct whether the
+            // popup lives in a top-layer <dialog> or on the page.
+            popup.style.left = `${rect.left}px`;
+            popup.style.top = `${rect.bottom + 4}px`;
           }
 
           function cleanup() {
@@ -197,7 +199,12 @@ export const MergeSuggestion = Extension.create({
               popup = document.createElement("div");
               popup.className = "sendora-slash-popup";
               popup.appendChild(renderer.element);
-              document.body.appendChild(popup);
+              // A native <dialog> (Astryx Dialog) renders in the top layer, above anything on
+              // document.body regardless of z-index. Mount the popup INSIDE that dialog when the
+              // editor is in one, so the menu is visible and clickable (else fall back to body).
+              const editorDom = p.editor?.view?.dom as HTMLElement | undefined;
+              const host = editorDom?.closest("dialog") ?? document.body;
+              host.appendChild(popup);
               place(p.clientRect);
             },
             onUpdate: (p: any) => {
