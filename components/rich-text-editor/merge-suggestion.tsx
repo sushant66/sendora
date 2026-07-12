@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, useEffect, useImperativeHandle, useState, Fragment } from "react";
+import { forwardRef, useImperativeHandle, useState, Fragment } from "react";
 import { Extension } from "@tiptap/core";
 import Suggestion from "@tiptap/suggestion";
 import { ReactRenderer } from "@tiptap/react";
@@ -91,7 +91,13 @@ type PopupHandle = { onKeyDown: (props: { event: KeyboardEvent }) => boolean; on
 const SlashMenuPopup = forwardRef<PopupHandle, PopupProps & { onClose: () => void }>(
   function SlashMenuPopup({ items, command, onClose }, ref) {
     const [activeIndex, setActiveIndex] = useState(0);
-    useEffect(() => setActiveIndex(0), [items]);
+    // When the filtered list changes (the user typed), reset the highlight to the first item.
+    // Adjusting state during render on a prop change is the sanctioned React pattern (no effect).
+    const [prevItems, setPrevItems] = useState(items);
+    if (prevItems !== items) {
+      setPrevItems(items);
+      setActiveIndex(0);
+    }
 
     useImperativeHandle(ref, () => ({
       onClose: () => {
@@ -174,7 +180,6 @@ export const MergeSuggestion = Extension.create({
             renderer = null;
           }
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           return {
             onStart: (p: any) => {
               open = true;

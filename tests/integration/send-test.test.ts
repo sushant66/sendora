@@ -26,7 +26,6 @@ const ACCOUNT = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   vi.mocked(getActiveAccount).mockResolvedValue(ACCOUNT as any);
   vi.mocked(resolveContent).mockResolvedValue({
     subject: "Hi {{first_name}}, I'm {{my_name}}",
@@ -46,7 +45,6 @@ describe("sendTestEmail", () => {
       "u1",
       { override: { subject: "Hi {{first_name}}, I'm {{my_name}}", bodyHtml: "<p>Hi {{first_name}}</p>" } },
       "Ada",
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       { provider, db: { insert } as any },
     );
 
@@ -68,7 +66,6 @@ describe("sendTestEmail", () => {
       "u1",
       { templateId: "t1" },
       "Ada",
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       { provider, db: { insert } as any },
     );
     expect(result.status).toBe("failed");

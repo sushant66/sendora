@@ -203,10 +203,10 @@ cleanly if built first.
 
 **Purpose**: Final verification. (UI craft is already done in-story via `/impeccable`.)
 
-- [ ] T055 [P] Accessibility verification of the slash menu + chip (keyboard, labels, focus) per Constitution III
-- [ ] T056 [P] Copy review: no em-dash in any new copy, starter templates, or email content (Constitution V)
-- [ ] T057 `pnpm typecheck` and `pnpm lint` pass with zero errors
-- [ ] T058 Run `quickstart.md` manual verification across all five stories
+- [X] T055 [P] Accessibility verification of the slash menu + chip (keyboard, labels, focus) per Constitution III
+- [X] T056 [P] Copy review: no em-dash in any new copy, starter templates, or email content (Constitution V)
+- [X] T057 `pnpm typecheck` and `pnpm lint` pass with zero errors
+- [ ] T058 Run `quickstart.md` manual verification across all five stories (automated proxies done: full `vitest` suite green, `next build` clean, and each journey encoded as a self-skipping E2E spec; the authenticated manual pass remains for the operator)
 
 ---
 
