@@ -52,4 +52,17 @@ describe("POST /api/send (bulk)", () => {
     const res = await SEND(jsonRequest({ contactIds: tooMany, templateId: "t1" }));
     expect(res.status).toBe(422);
   });
+
+  it("passes resumeId through to sendEmails, attaching it identically for every recipient (003-resume-attachments)", async () => {
+    vi.mocked(sendEmails).mockResolvedValue({
+      batchId: "b1", total: 2, sent: 2, failed: 0,
+      results: [
+        { contactId: "c1", recipientEmail: "a@x.com", status: "sent" },
+        { contactId: "c2", recipientEmail: "b@x.com", status: "sent" },
+      ],
+    });
+    const res = await SEND(jsonRequest({ contactIds: ["c1", "c2"], templateId: "t1", resumeId: "r1" }));
+    expect(res.status).toBe(200);
+    expect(sendEmails).toHaveBeenCalledWith("u1", { contactIds: ["c1", "c2"], templateId: "t1", resumeId: "r1" }, "Job Seeker");
+  });
 });

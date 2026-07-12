@@ -24,6 +24,7 @@ import type { AccountStatus } from "@/lib/email/types";
 import type { SendResultItem, SendSummary } from "@/lib/send/types";
 import { MAX_SEND_RECIPIENTS } from "@/lib/validation/send";
 import type { RecontactInfo } from "@/lib/history/types";
+import type { Resume } from "@/lib/resumes/types";
 import { RichTextEditor } from "@/components/rich-text-editor/rich-text-editor";
 import { takePreselect } from "@/lib/compose/preselect";
 import { EmailPreview } from "./email-preview";
@@ -34,12 +35,14 @@ export function ComposeView() {
   const toast = useToast();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [resumes, setResumes] = useState<Resume[]>([]);
   const [account, setAccount] = useState<AccountStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const [contactIds, setContactIds] = useState<string[]>([]);
   const [previewFor, setPreviewFor] = useState<string>("");
   const [templateId, setTemplateId] = useState("");
+  const [resumeId, setResumeId] = useState("");
   const [subject, setSubject] = useState("");
   const [bodyHtml, setBodyHtml] = useState("");
 
@@ -51,14 +54,16 @@ export function ComposeView() {
   useEffect(() => {
     (async () => {
       try {
-        const [c, t, a] = await Promise.all([
+        const [c, t, a, r] = await Promise.all([
           apiRequest<ContactList>("/api/contacts?all=1"),
           apiRequest<{ items: Template[] }>("/api/templates"),
           apiRequest<AccountStatus>("/api/email-account"),
+          apiRequest<{ items: Resume[] }>("/api/resumes"),
         ]);
         setContacts(c.items);
         setTemplates(t.items);
         setAccount(a);
+        setResumes(r.items);
 
         // Pick up a batch handed off from the import screen and pre-fill the recipients, so the
         // user doesn't re-select the list they just imported. Keep only IDs that still exist,
@@ -106,6 +111,7 @@ export function ComposeView() {
   const previewContactId = contactIds.includes(previewFor) ? previewFor : contactIds[0] ?? "";
   const previewContact = contactsById.get(previewContactId);
   const hasContent = subject.trim().length > 0 && bodyHtml.replace(/<[^>]*>/g, "").trim().length > 0;
+  const attachedResume = resumes.find((r) => r.id === resumeId) ?? null;
 
   // Guards against out-of-order preview responses clobbering a newer request.
   const previewSeq = useRef(0);
@@ -164,7 +170,7 @@ export function ComposeView() {
     try {
       const summary = await apiRequest<SendSummary>("/api/send", {
         method: "POST",
-        json: { contactIds, templateId: templateId || undefined, override: { subject, bodyHtml } },
+        json: { contactIds, templateId: templateId || undefined, override: { subject, bodyHtml }, resumeId: resumeId || undefined },
       });
       setResult(summary);
       if (summary.failed === 0) toast({ body: `Sent to ${summary.sent} recruiter${summary.sent === 1 ? "" : "s"}.` });
@@ -174,6 +180,14 @@ export function ComposeView() {
       if (err instanceof ApiError && err.body.error === "no_active_account") {
         setAccount({ connected: false });
         toast({ body: "Connect your Gmail before sending.", type: "error" });
+      } else if (err instanceof ApiError && err.body.error === "resume_unavailable") {
+        setResumeId("");
+        toast({ body: "That resume is no longer available. Pick another.", type: "error" });
+      } else if (err instanceof ApiError && err.body.error === "attachment_too_large") {
+        toast({ body: "That resume is too large to attach to this email. Try a smaller file.", type: "error" });
+      } else if (err instanceof ApiError && err.status === 404) {
+        setResumeId("");
+        toast({ body: "That resume could not be found. Pick another.", type: "error" });
       } else if (err instanceof ApiError && err.status === 422) {
         toast({ body: "Add recipients, a subject, and a body before sending.", type: "error" });
       } else {
@@ -276,6 +290,14 @@ export function ComposeView() {
             value={templateId}
             onChange={onTemplate}
           />
+          <Selector
+            label="Resume"
+            hasSearch
+            placeholder="No attachment (optional)"
+            options={resumes.map((r) => ({ value: r.id, label: `${r.label} (${r.fileName})` }))}
+            value={resumeId}
+            onChange={setResumeId}
+          />
           <TextInput label="Subject" value={subject} onChange={setSubject} placeholder="Subject line" />
           <RichTextEditor key={templateId || "blank"} label="Body" value={bodyHtml} onChange={setBodyHtml} />
           <HStack justify="between" align="center" gap={3}>
@@ -319,6 +341,7 @@ export function ComposeView() {
             fromEmail={account?.emailAddress}
             toEmail={previewContact?.email}
             isEmpty={contactIds.length === 0 || !hasContent}
+            attachedResume={attachedResume ? { label: attachedResume.label, fileName: attachedResume.fileName } : null}
           />
         </VStack>
       </Grid>

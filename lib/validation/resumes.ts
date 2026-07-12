@@ -34,8 +34,28 @@ export const ResumeFileSchema = z
   });
 export type ResumeFile = z.infer<typeof ResumeFileSchema>;
 
+/** Characters unsafe in a file name: path separators and ASCII control characters. */
+const UNSAFE_FILENAME_CHARS = /[/\\\x00-\x1f<>:"|?*]/g;
+
+/**
+ * An optional custom file name (003-resume-attachments, research.md §7). Never rejects:
+ * omitted, empty, whitespace-only, or unusable-after-stripping input all resolve to
+ * `undefined`, so the caller falls back to the source file's own name (`?? file.name`).
+ */
+export const ResumeFileNameSchema = z
+  .string()
+  .optional()
+  .transform((raw): string | undefined => {
+    const trimmed = raw?.trim();
+    if (!trimmed) return undefined;
+    const stripped = trimmed.replace(UNSAFE_FILENAME_CHARS, "").trim();
+    if (!stripped) return undefined;
+    return /\.pdf$/i.test(stripped) ? stripped : `${stripped}.pdf`;
+  });
+
 export const ResumeUploadSchema = z.object({
   label: ResumeLabelSchema,
   file: ResumeFileSchema,
+  fileName: ResumeFileNameSchema,
 });
 export type ResumeUploadInput = z.infer<typeof ResumeUploadSchema>;

@@ -59,6 +59,7 @@ function UploadForm({
 }) {
   const [label, setLabel] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [fileName, setFileName] = useState("");
   const [labelError, setLabelError] = useState<string | undefined>(undefined);
   const [fileError, setFileError] = useState<string | undefined>(undefined);
   const [isUploading, setIsUploading] = useState(false);
@@ -71,6 +72,7 @@ function UploadForm({
       const form = new FormData();
       if (!replacing) form.set("label", label);
       if (file) form.set("file", file);
+      if (fileName.trim()) form.set("fileName", fileName);
       const url = replacing ? `/api/resumes/${replacing.id}/replace` : "/api/resumes";
       const resume = await apiRequest<Resume>(url, { method: "POST", body: form });
       onUploaded(resume);
@@ -128,6 +130,13 @@ function UploadForm({
           description="PDF, up to 10MB."
           isRequired
           status={fileError ? { type: "error", message: fileError } : undefined}
+        />
+        <TextInput
+          label="File name"
+          value={fileName}
+          onChange={setFileName}
+          placeholder="e.g. Varun Mhatre - Backend Engineer.pdf"
+          description="Optional. This is the name recipients see when the resume is emailed. Leave blank to use the uploaded file's own name."
         />
         <HStack justify="end" gap={2}>
           <Button label="Cancel" variant="ghost" onClick={onCancel} isDisabled={isUploading} />

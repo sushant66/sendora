@@ -33,3 +33,32 @@ test.describe("US4 — bulk send", () => {
     await expect(page.getByRole("table")).toBeVisible();
   });
 });
+
+/**
+ * 003-resume-attachments T007 — a bulk send with a resume attached goes to every recipient
+ * identically. Requires at least one saved resume (002-resume-storage's quickstart.md US1).
+ */
+test.describe("003-resume-attachments — attach a resume to a bulk send", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/compose");
+    if (page.url().includes("/sign-in")) test.skip(true, "requires an authenticated session (see quickstart.md)");
+  });
+
+  test("a resume selected once attaches to every recipient in the batch", async ({ page }) => {
+    await page.getByRole("button", { name: /Choose one or more recruiters/ }).click();
+    const options = page.getByRole("option");
+    await options.nth(0).click();
+    await options.nth(1).click();
+    await page.keyboard.press("Escape");
+
+    await page.getByRole("button", { name: /Start from a template/ }).click();
+    await page.getByRole("option").first().click();
+
+    await page.getByRole("button", { name: /No attachment/ }).click();
+    await page.getByRole("option").first().click();
+    await expect(page.getByText(/Attachment: /)).toBeVisible();
+
+    await page.getByRole("button", { name: /Send \d+ emails/ }).click();
+    await expect(page.getByText(/Sent to \d+ recruiters|Sent \d+ of \d+/)).toBeVisible();
+  });
+});

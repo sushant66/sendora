@@ -172,6 +172,9 @@ export const sendBatches = pgTable(
       .notNull()
       .references(() => connectedEmailAccounts.id, { onDelete: "cascade" }),
     templateId: text("template_id").references(() => emailTemplates.id, { onDelete: "set null" }),
+    // 003-resume-attachments: which resume (if any) was attached to every send in this
+    // batch. Nullable, onDelete: set null — mirrors templateId exactly (see data-model.md).
+    attachedResumeId: text("attached_resume_id").references(() => resumes.id, { onDelete: "set null" }),
     kind: text("kind").notNull(), // single | bulk
     total: integer("total").notNull().default(0),
     sentCount: integer("sent_count").notNull().default(0),

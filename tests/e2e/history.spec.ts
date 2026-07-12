@@ -30,3 +30,20 @@ test.describe("US5 — sending history & re-contact warning", () => {
     await expect(page.getByText(/already emailed/i)).toBeVisible();
   });
 });
+
+/**
+ * 003-resume-attachments T014 — a past send's attached resume is shown, and resending it
+ * reattaches the same resume automatically. Requires the single-send-with-attachment
+ * journey (tests/e2e/send-single.spec.ts) to have run first, or an equivalently seeded send.
+ */
+test.describe("003-resume-attachments — attachment history & resend", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/history");
+    if (page.url().includes("/sign-in")) test.skip(true, "requires an authenticated session (see quickstart.md)");
+  });
+
+  test("a send's attached resume is visible in its detail view", async ({ page }) => {
+    await page.getByRole("row").nth(1).click();
+    await expect(page.getByText(/Attached/i)).toBeVisible();
+  });
+});

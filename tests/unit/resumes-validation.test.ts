@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ResumeLabelSchema, ResumeFileSchema } from "@/lib/validation/resumes";
+import { ResumeLabelSchema, ResumeFileSchema, ResumeFileNameSchema } from "@/lib/validation/resumes";
 
 /**
  * T007 [US1] — label + file validation, including the content-based (magic-byte) PDF
@@ -58,5 +58,40 @@ describe("ResumeFileSchema", () => {
 
   it("rejects an empty file", () => {
     expect(() => ResumeFileSchema.parse(file({ size: 0, buffer: Buffer.alloc(0) }))).toThrow();
+  });
+});
+
+/**
+ * 003-resume-attachments T018 — an optional custom file name (research.md §7). Never
+ * throws: an omitted or unusable name resolves to `undefined` so the caller falls back to
+ * the source file's own name.
+ */
+describe("ResumeFileNameSchema", () => {
+  it("resolves to undefined when omitted, empty, or whitespace-only", () => {
+    expect(ResumeFileNameSchema.parse(undefined)).toBeUndefined();
+    expect(ResumeFileNameSchema.parse("")).toBeUndefined();
+    expect(ResumeFileNameSchema.parse("   ")).toBeUndefined();
+  });
+
+  it("appends .pdf when missing", () => {
+    expect(ResumeFileNameSchema.parse("Backend Engineer Resume")).toBe("Backend Engineer Resume.pdf");
+  });
+
+  it("doesn't double-append .pdf when already present (case-insensitive)", () => {
+    expect(ResumeFileNameSchema.parse("resume.pdf")).toBe("resume.pdf");
+    expect(ResumeFileNameSchema.parse("resume.PDF")).toBe("resume.PDF");
+  });
+
+  it("strips unsafe file-name characters", () => {
+    expect(ResumeFileNameSchema.parse("a/b\\c.pdf")).toBe("abc.pdf");
+    expect(ResumeFileNameSchema.parse("resume\x00\x1f.pdf")).toBe("resume.pdf");
+  });
+
+  it("resolves to undefined when nothing usable remains after stripping", () => {
+    expect(ResumeFileNameSchema.parse("////")).toBeUndefined();
+  });
+
+  it("trims surrounding whitespace", () => {
+    expect(ResumeFileNameSchema.parse("  My Resume  ")).toBe("My Resume.pdf");
   });
 });

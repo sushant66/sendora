@@ -186,6 +186,11 @@ export function HistoryView() {
                 · {ev.failed} failed
               </Text>
             )}
+            {ev.attachedResume && (
+              <Text size="sm" color="secondary">
+                · {ev.attachedResume.label} attached
+              </Text>
+            )}
           </HStack>
         }
         endContent={

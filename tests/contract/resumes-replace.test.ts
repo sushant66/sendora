@@ -32,9 +32,10 @@ import { POST } from "@/app/api/resumes/[id]/replace/route";
 const USER = { id: "u1", email: "u1@x.com", name: null, image: null };
 const PDF_BYTES = Buffer.concat([Buffer.from("%PDF-1.7\n"), Buffer.alloc(100, 1)]);
 
-function replaceRequest(url: string, file?: { name: string; type: string; bytes: Buffer } | null): NextRequest {
+function replaceRequest(url: string, file?: { name: string; type: string; bytes: Buffer } | null, fileName?: string): NextRequest {
   const form = new FormData();
   if (file) form.set("file", new File([new Uint8Array(file.bytes)], file.name, { type: file.type }));
+  if (fileName !== undefined) form.set("fileName", fileName);
   return new NextRequest(new URL(url, "http://localhost"), { method: "POST", body: form });
 }
 
@@ -53,7 +54,16 @@ describe("POST /api/resumes/:id/replace", () => {
     const res = await POST(replaceRequest("/api/resumes/r1/replace", { name: "v2.pdf", type: "application/pdf", bytes: PDF_BYTES }), ctx);
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual(replaced);
-    expect(service.replaceResume).toHaveBeenCalledWith("u1", "r1", expect.objectContaining({ name: "v2.pdf", type: "application/pdf" }));
+    expect(service.replaceResume).toHaveBeenCalledWith("u1", "r1", expect.objectContaining({ name: "v2.pdf", type: "application/pdf" }), undefined);
+  });
+
+  it("passes an optional custom fileName through, normalized (003-resume-attachments)", async () => {
+    const replaced = { id: "r2", label: "Backend Engineer", version: 2, fileName: "My Resume.pdf", fileSize: PDF_BYTES.byteLength, status: "active" as const, createdAt: "2026-07-12T00:00:00.000Z" };
+    vi.mocked(service.replaceResume).mockResolvedValue(replaced);
+
+    const res = await POST(replaceRequest("/api/resumes/r1/replace", { name: "v2.pdf", type: "application/pdf", bytes: PDF_BYTES }, "My Resume"), ctx);
+    expect(res.status).toBe(200);
+    expect(service.replaceResume).toHaveBeenCalledWith("u1", "r1", expect.anything(), "My Resume.pdf");
   });
 
   it("returns 422 when no file is provided", async () => {

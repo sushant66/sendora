@@ -19,11 +19,14 @@ export function EmailPreview({
   fromEmail,
   toEmail,
   isEmpty,
+  attachedResume,
 }: {
   preview: TemplatePreview | null;
   fromEmail?: string;
   toEmail?: string;
   isEmpty: boolean;
+  /** The resume (if any) that will be attached to this send (003-resume-attachments). */
+  attachedResume?: { label: string; fileName: string } | null;
 }) {
   return (
     <Card padding={5}>
@@ -41,6 +44,11 @@ export function EmailPreview({
             <VStack gap={1} align="stretch">
               {fromEmail && <Text size="sm" color="secondary">From: {fromEmail}</Text>}
               {toEmail && <Text size="sm" color="secondary">To: {toEmail}</Text>}
+              {attachedResume && (
+                <Text size="sm" color="secondary">
+                  Attachment: {attachedResume.label} ({attachedResume.fileName})
+                </Text>
+              )}
               <Heading level={3}>{preview.subject || "(no subject)"}</Heading>
             </VStack>
             <Divider />

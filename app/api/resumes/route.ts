@@ -13,12 +13,16 @@ export const GET = route(async (req: NextRequest) => {
   return ok(result);
 });
 
-/** POST /api/resumes — upload a labeled resume. Multipart: `label` (text) + `file` (PDF). */
+/**
+ * POST /api/resumes — upload a labeled resume. Multipart: `label` (text) + `file` (PDF) +
+ * optional `fileName` (text, 003-resume-attachments) to override the saved display name.
+ */
 export const POST = route(async (req: NextRequest) => {
   const user = await requireUser();
   const form = await req.formData();
   const label = form.get("label");
   const file = form.get("file");
+  const fileName = form.get("fileName");
 
   const input = ResumeUploadSchema.parse({
     label: typeof label === "string" ? label : "",
@@ -26,6 +30,7 @@ export const POST = route(async (req: NextRequest) => {
       file instanceof File
         ? { name: file.name, type: file.type, size: file.size, buffer: Buffer.from(await file.arrayBuffer()) }
         : { name: "", type: "", size: 0, buffer: Buffer.alloc(0) },
+    fileName: typeof fileName === "string" ? fileName : undefined,
   });
 
   const resume = await uploadResume(user.id, input);

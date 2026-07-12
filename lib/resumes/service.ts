@@ -73,7 +73,7 @@ export async function uploadResume(
         userId,
         label: input.label,
         version,
-        fileName: input.file.name,
+        fileName: input.fileName ?? input.file.name,
         storageKey,
         fileSize: input.file.size,
       })
@@ -204,6 +204,7 @@ export async function replaceResume(
   userId: string,
   id: string,
   file: ResumeFile,
+  fileName?: string,
   opts: { db?: Db; storage?: ResumeStorage } = {},
 ): Promise<Resume> {
   const db = opts.db ?? defaultDb;
@@ -236,7 +237,7 @@ export async function replaceResume(
     userId,
     label: target.label,
     version,
-    fileName: file.name,
+    fileName: fileName ?? file.name,
     storageKey,
     fileSize: file.size,
   });

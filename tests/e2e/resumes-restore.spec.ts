@@ -83,4 +83,16 @@ test.describe("US4 — update a resume without losing the old one", () => {
     await expect(page.getByText(/version 2\b/i)).toBeVisible();
     await expect(page.getByText(/version 3\b/i)).toBeVisible();
   });
+
+  test("003-resume-attachments: a custom file name on Update is shown for the new version", async ({ page }) => {
+    await upload(page, "qa-v1.pdf", V1, "QA Engineer");
+
+    await page.getByRole("row", { name: /QA Engineer/ }).getByRole("button", { name: /actions|more/i }).click();
+    await page.getByRole("menuitem", { name: "Update" }).click();
+    await page.locator('input[type="file"]').setInputFiles({ name: "qa-v2.pdf", mimeType: "application/pdf", buffer: V2 });
+    await page.getByLabel("File name").fill("Varun Mhatre - QA Engineer");
+    await page.getByRole("button", { name: "Update" }).click();
+
+    await expect(page.getByText("Varun Mhatre - QA Engineer.pdf")).toBeVisible();
+  });
 });

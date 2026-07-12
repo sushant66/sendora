@@ -12,6 +12,7 @@ export const SendRequestSchema = z
   .object({
     contactIds: z.array(z.string().min(1)).min(1, "select at least one recipient").max(MAX_SEND_RECIPIENTS, "too many recipients for one send"),
     templateId: z.string().min(1).optional(),
+    resumeId: z.string().min(1).optional(),
     override: z
       .object({
         subject: z.string().trim().min(1, "a subject is required"),

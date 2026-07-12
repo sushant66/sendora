@@ -33,3 +33,41 @@ test.describe("US2 — single templated send", () => {
     await expect(page.getByText("Email sent")).toBeVisible();
   });
 });
+
+/**
+ * 003-resume-attachments T007 — attaching a saved resume to a single send. Requires the
+ * same session as above, plus at least one saved resume (see 002-resume-storage's
+ * quickstart.md US1).
+ */
+test.describe("003-resume-attachments — attach a resume to a single send", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/compose");
+    if (page.url().includes("/sign-in")) test.skip(true, "requires an authenticated session (see quickstart.md)");
+  });
+
+  test("selecting a resume shows it in the preview and sends it attached", async ({ page }) => {
+    await page.getByRole("button", { name: /Choose a recruiter/ }).click();
+    await page.getByRole("option").first().click();
+    await page.getByRole("button", { name: /Start from a template/ }).click();
+    await page.getByRole("option").first().click();
+
+    await page.getByRole("button", { name: /No attachment/ }).click();
+    await page.getByRole("option").first().click();
+
+    await expect(page.getByText(/Attachment: /)).toBeVisible();
+
+    await page.getByRole("button", { name: "Send email" }).click();
+    await expect(page.getByText("Email sent")).toBeVisible();
+  });
+
+  test("leaving the selector on \"No attachment\" sends exactly as before", async ({ page }) => {
+    await page.getByRole("button", { name: /Choose a recruiter/ }).click();
+    await page.getByRole("option").first().click();
+    await page.getByRole("button", { name: /Start from a template/ }).click();
+    await page.getByRole("option").first().click();
+
+    await expect(page.getByText(/Attachment: /)).not.toBeVisible();
+    await page.getByRole("button", { name: "Send email" }).click();
+    await expect(page.getByText("Email sent")).toBeVisible();
+  });
+});

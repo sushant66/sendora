@@ -74,7 +74,12 @@ export function HistoryDetailDrawer({
     try {
       const res = await apiRequest<ResendResult>(`/api/history/${detail.id}/resend`, { method: "POST" });
       if (res.status === "sent") {
-        toast({ body: `Resent to ${detail.recipientName ?? detail.recipientEmail}.` });
+        toast({
+          body: res.attachmentDropped
+            ? `Resent to ${detail.recipientName ?? detail.recipientEmail}, but the attached resume could no longer be included.`
+            : `Resent to ${detail.recipientName ?? detail.recipientEmail}.`,
+          type: res.attachmentDropped ? "error" : undefined,
+        });
         onResent();
         onClose();
       } else {
@@ -143,6 +148,9 @@ export function HistoryDetailDrawer({
                 </HStack>
                 <MetaRow label="To" value={detail.recipientName ? `${detail.recipientName} · ${detail.recipientEmail}` : detail.recipientEmail} />
                 <MetaRow label="From" value={detail.fromEmail || "your connected inbox"} />
+                {detail.attachedResume && (
+                  <MetaRow label="Attached" value={`${detail.attachedResume.label} (${detail.attachedResume.fileName})`} />
+                )}
               </VStack>
 
               {/* Failure + resend */}

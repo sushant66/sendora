@@ -55,7 +55,7 @@ beforeEach(() => {
 
 describe("GET /api/history", () => {
   it("returns send events with a nextCursor", async () => {
-    const event: HistoryEvent = { id: "b1", kind: "single", when: RECORD.createdAt, total: 1, sent: 1, failed: 0, record: RECORD };
+    const event: HistoryEvent = { id: "b1", kind: "single", when: RECORD.createdAt, total: 1, sent: 1, failed: 0, record: RECORD, attachedResume: null };
     vi.mocked(listHistory).mockResolvedValue({ items: [event], nextCursor: "cur2" });
     const res = await HISTORY(req("/api/history"));
     expect(res.status).toBe(200);
@@ -71,6 +71,17 @@ describe("GET /api/history", () => {
     await HISTORY(req("/api/history?cursor=abc"));
     expect(listHistory).toHaveBeenCalledWith("u1", { cursor: "abc" });
   });
+
+  it("shows the attached resume's label and file name when one was attached (003-resume-attachments)", async () => {
+    const event: HistoryEvent = {
+      id: "b1", kind: "single", when: RECORD.createdAt, total: 1, sent: 1, failed: 0, record: RECORD,
+      attachedResume: { label: "Backend Engineer", fileName: "backend-engineer.pdf" },
+    };
+    vi.mocked(listHistory).mockResolvedValue({ items: [event], nextCursor: null });
+    const res = await HISTORY(req("/api/history"));
+    const body = await res.json();
+    expect(body.items[0].attachedResume).toEqual({ label: "Backend Engineer", fileName: "backend-engineer.pdf" });
+  });
 });
 
 describe("GET /api/history/:id", () => {
@@ -81,6 +92,7 @@ describe("GET /api/history/:id", () => {
       bodyText: "Hello",
       fromEmail: "u1@gmail.com",
       batch: { id: "b1", kind: "single", total: 1, sent: 1, failed: 0 },
+      attachedResume: null,
     };
     vi.mocked(getHistoryDetail).mockResolvedValue(detail);
     const res = await DETAIL(req("/api/history/s1"), { params: Promise.resolve({ id: "s1" }) });
@@ -88,6 +100,21 @@ describe("GET /api/history/:id", () => {
     const body = await res.json();
     expect(body).toMatchObject({ id: "s1", bodyHtml: "<p>Hello</p>", fromEmail: "u1@gmail.com" });
     expect(getHistoryDetail).toHaveBeenCalledWith("u1", "s1");
+  });
+
+  it("shows the attached resume when one was attached (003-resume-attachments)", async () => {
+    const detail: HistoryDetail = {
+      ...RECORD,
+      bodyHtml: "<p>Hello</p>",
+      bodyText: "Hello",
+      fromEmail: "u1@gmail.com",
+      batch: { id: "b1", kind: "single", total: 1, sent: 1, failed: 0 },
+      attachedResume: { label: "Backend Engineer", fileName: "backend-engineer.pdf" },
+    };
+    vi.mocked(getHistoryDetail).mockResolvedValue(detail);
+    const res = await DETAIL(req("/api/history/s1"), { params: Promise.resolve({ id: "s1" }) });
+    const body = await res.json();
+    expect(body.attachedResume).toEqual({ label: "Backend Engineer", fileName: "backend-engineer.pdf" });
   });
 
   it("404s when the record isn't the caller's", async () => {
@@ -109,11 +136,18 @@ describe("GET /api/history/batch/:batchId", () => {
 
 describe("POST /api/history/:id/resend", () => {
   it("resends and returns the new record outcome", async () => {
-    vi.mocked(resendRecord).mockResolvedValue({ recordId: "s2", status: "sent", reason: null });
+    vi.mocked(resendRecord).mockResolvedValue({ recordId: "s2", status: "sent", reason: null, attachmentDropped: false });
     const res = await RESEND(req("/api/history/s1/resend", "POST"), { params: Promise.resolve({ id: "s1" }) });
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ recordId: "s2", status: "sent", reason: null });
+    expect(await res.json()).toEqual({ recordId: "s2", status: "sent", reason: null, attachmentDropped: false });
     expect(resendRecord).toHaveBeenCalledWith("u1", "s1", null);
+  });
+
+  it("reports attachmentDropped when the original attachment could not be reattached (003-resume-attachments)", async () => {
+    vi.mocked(resendRecord).mockResolvedValue({ recordId: "s2", status: "sent", reason: null, attachmentDropped: true });
+    const res = await RESEND(req("/api/history/s1/resend", "POST"), { params: Promise.resolve({ id: "s1" }) });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ attachmentDropped: true });
   });
 });
 

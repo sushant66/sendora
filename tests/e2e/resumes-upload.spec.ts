@@ -50,4 +50,24 @@ test.describe("US1 — save a labeled resume", () => {
 
     await expect(page.getByText(/label is required/i)).toBeVisible();
   });
+
+  test("a custom file name is shown instead of the source file's name (003-resume-attachments)", async ({ page }) => {
+    await page.getByRole("button", { name: "Upload resume" }).click();
+    await page.locator('input[type="file"]').setInputFiles({ name: "scan-final2.pdf", mimeType: "application/pdf", buffer: PDF_BYTES });
+    await page.getByLabel("Label").fill("Data Analyst");
+    await page.getByLabel("File name").fill("Varun Mhatre - Data Analyst");
+    await page.getByRole("button", { name: "Upload" }).click();
+
+    await expect(page.getByText("Varun Mhatre - Data Analyst.pdf")).toBeVisible();
+    await expect(page.getByText("scan-final2.pdf")).not.toBeVisible();
+  });
+
+  test("leaving the file name blank falls back to the source file's own name", async ({ page }) => {
+    await page.getByRole("button", { name: "Upload resume" }).click();
+    await page.locator('input[type="file"]').setInputFiles({ name: "product-manager.pdf", mimeType: "application/pdf", buffer: PDF_BYTES });
+    await page.getByLabel("Label").fill("Product Manager");
+    await page.getByRole("button", { name: "Upload" }).click();
+
+    await expect(page.getByText("product-manager.pdf")).toBeVisible();
+  });
 });
