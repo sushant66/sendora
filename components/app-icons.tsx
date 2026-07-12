@@ -27,6 +27,13 @@ function base(props: SVGProps<SVGSVGElement>) {
   };
 }
 
+/** Plus: a leading affordance for "add" actions so the control reads as a button, not text. */
+export const PlusIcon: Glyph = (props) => (
+  <svg {...base(props)}>
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+);
+
 /** Sendora brand mark: an upward paper plane — composed, deliberate sending. */
 export const BrandMark: Glyph = (props) => (
   <svg {...base(props)}>
@@ -74,5 +81,13 @@ export const MailIcon: Glyph = (props) => (
   <svg {...base(props)}>
     <rect x="3.5" y="5.5" width="17" height="13" rx="1.5" />
     <path d="m4.5 7 7.5 5.5L19.5 7" />
+  </svg>
+);
+
+/** Sender profile: a single person outline (the job seeker's own details). */
+export const ProfileIcon: Glyph = (props) => (
+  <svg {...base(props)}>
+    <circle cx="12" cy="8" r="3.5" />
+    <path d="M5.5 19.5a6.5 6.5 0 0 1 13 0" />
   </svg>
 );

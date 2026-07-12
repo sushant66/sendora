@@ -1,7 +1,8 @@
-import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { db as defaultDb, type Db } from "@/lib/db/client";
 import { recruiterContacts, type RecruiterContactRow } from "@/lib/db/schema";
 import { ConflictError, NotFoundError } from "@/lib/errors";
+import { softDeleteContacts } from "./soft-delete";
 import { runImportPipeline } from "@/lib/import/pipeline";
 import {
   normalizeEmail,
@@ -55,7 +56,7 @@ export async function listContacts(
   opts: { query?: string; cursor?: string; all?: boolean } = {},
   db: Db = defaultDb,
 ): Promise<ContactList> {
-  const filters = [eq(recruiterContacts.userId, userId)];
+  const filters = [eq(recruiterContacts.userId, userId), isNull(recruiterContacts.deletedAt)];
 
   const q = opts.query?.trim();
   if (q) {
@@ -114,7 +115,13 @@ export async function createContact(
   const [existing] = await db
     .select({ id: recruiterContacts.id })
     .from(recruiterContacts)
-    .where(and(eq(recruiterContacts.userId, userId), eq(recruiterContacts.emailNormalized, emailNormalized)))
+    .where(
+      and(
+        eq(recruiterContacts.userId, userId),
+        eq(recruiterContacts.emailNormalized, emailNormalized),
+        isNull(recruiterContacts.deletedAt),
+      ),
+    )
     .limit(1);
   if (existing) throw new ConflictError("email_exists", "a contact with this email already exists");
 
@@ -146,15 +153,21 @@ export async function updateContact(
   const [target] = await db
     .select({ id: recruiterContacts.id })
     .from(recruiterContacts)
-    .where(and(eq(recruiterContacts.id, id), eq(recruiterContacts.userId, userId)))
+    .where(and(eq(recruiterContacts.id, id), eq(recruiterContacts.userId, userId), isNull(recruiterContacts.deletedAt)))
     .limit(1);
   if (!target) throw new NotFoundError("contact not found");
 
-  // Guard against colliding with a *different* contact's email (FR-005).
+  // Guard against colliding with a *different* live contact's email (FR-005).
   const [collision] = await db
     .select({ id: recruiterContacts.id })
     .from(recruiterContacts)
-    .where(and(eq(recruiterContacts.userId, userId), eq(recruiterContacts.emailNormalized, emailNormalized)))
+    .where(
+      and(
+        eq(recruiterContacts.userId, userId),
+        eq(recruiterContacts.emailNormalized, emailNormalized),
+        isNull(recruiterContacts.deletedAt),
+      ),
+    )
     .limit(1);
   if (collision && collision.id !== id) {
     throw new ConflictError("email_exists", "another contact already uses this email");
@@ -176,12 +189,11 @@ export async function updateContact(
   return toContact(row);
 }
 
+/** Single delete is a soft-delete (US4): it preserves the row's id and its send_record
+ *  linkage so it can be undone, exactly like a bulk delete. */
 export async function deleteContact(userId: string, id: string, db: Db = defaultDb): Promise<void> {
-  const deleted = await db
-    .delete(recruiterContacts)
-    .where(and(eq(recruiterContacts.id, id), eq(recruiterContacts.userId, userId)))
-    .returning({ id: recruiterContacts.id });
-  if (deleted.length === 0) throw new NotFoundError("contact not found");
+  const { count } = await softDeleteContacts(userId, { ids: [id] }, db);
+  if (count === 0) throw new NotFoundError("contact not found");
 }
 
 export async function importContacts(
@@ -192,7 +204,7 @@ export async function importContacts(
   const existing = await db
     .select({ emailNormalized: recruiterContacts.emailNormalized })
     .from(recruiterContacts)
-    .where(eq(recruiterContacts.userId, userId));
+    .where(and(eq(recruiterContacts.userId, userId), isNull(recruiterContacts.deletedAt)));
 
   const summary = runImportPipeline(request.rows as RawImportRow[], existing.map((e) => e.emailNormalized));
 
@@ -228,7 +240,13 @@ export async function importContacts(
     const rows = await db
       .select({ id: recruiterContacts.id, emailNormalized: recruiterContacts.emailNormalized })
       .from(recruiterContacts)
-      .where(and(eq(recruiterContacts.userId, userId), inArray(recruiterContacts.emailNormalized, batchEmails)));
+      .where(
+        and(
+          eq(recruiterContacts.userId, userId),
+          inArray(recruiterContacts.emailNormalized, batchEmails),
+          isNull(recruiterContacts.deletedAt),
+        ),
+      );
     const idByEmail = new Map(rows.map((r) => [r.emailNormalized, r.id]));
     contactIds = batchEmails.map((e) => idByEmail.get(e)).filter((id): id is string => Boolean(id));
   }

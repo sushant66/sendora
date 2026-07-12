@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   pgTable,
   text,
@@ -88,18 +89,55 @@ export const recruiterContacts = pgTable(
     company: text("company"),
     role: text("role"),
     source: text("source").notNull(),
+    // Soft-delete (feature 002, US4, FR-022/FR-023): a non-null deletedAt hides the row from
+    // every read; deletedBatch groups the rows removed by one delete action (the unit of undo).
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedBatch: text("deleted_batch"),
     // Millisecond precision so the keyset cursor (a JS Date → ISO string) round-trips
     // losslessly; without it, a bulk import (one transaction timestamp) breaks pagination.
     createdAt: timestamp("created_at", { withTimezone: true, precision: 3 }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("recruiter_contact_user_email_idx").on(t.userId, t.emailNormalized),
+    // Partial unique index: a soft-deleted email no longer blocks re-adding the same address.
+    uniqueIndex("recruiter_contact_user_email_idx")
+      .on(t.userId, t.emailNormalized)
+      .where(sql`${t.deletedAt} IS NULL`),
     index("recruiter_contact_user_idx").on(t.userId),
+    index("recruiter_contact_deleted_batch_idx").on(t.deletedBatch),
   ],
 );
 
 export type RecruiterContactRow = typeof recruiterContacts.$inferSelect;
+
+/**
+ * SenderProfile (feature 002, User Story 1) — one row per user (1:1 with `user`), created
+ * lazily on first save. Backs the sender (`my_*`) merge fields and the authoritative in-app
+ * display name (FR-001). Every value field is nullable; an empty profile is a full set of
+ * nulls. A user reads/writes only their own row (FR-006/FR-024).
+ */
+export const senderProfiles = pgTable(
+  "sender_profile",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    displayName: text("display_name"),
+    title: text("title"),
+    pitch: text("pitch"),
+    skills: text("skills"),
+    link: text("link"),
+    location: text("location"),
+    workPreference: text("work_preference"), // remote | hybrid | onsite | open
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("sender_profile_user_idx").on(t.userId)],
+);
+export type SenderProfileRow = typeof senderProfiles.$inferSelect;
 
 /**
  * ConnectedEmailAccount (User Story 2) — authorization to send from an external provider

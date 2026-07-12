@@ -1,12 +1,16 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-`specs/001-recruiter-outreach/plan.md`
+`specs/002-sender-profile-merge-polish/plan.md`
 
-Active feature: **Recruiter Outreach** (`001-recruiter-outreach`).
+Active feature: **Sender profile, merge fields & outreach polish** (`002-sender-profile-merge-polish`).
+Builds on shipped **Recruiter Outreach** (`001-recruiter-outreach`, see its plan for stack/flows).
 Stack: Next.js (App Router, TS strict) + Astryx (React/StyleX) + NeonDB (Drizzle ORM);
 Auth.js + Google OAuth (`gmail.send`); sending behind a provider-agnostic seam.
-Design docs live in `specs/001-recruiter-outreach/` (spec, plan, research, data-model,
+002 adds: a `sender_profile` table + namespaced `my_*` merge fields, an inline "/" slash-menu
+picker with atomic merge chips (Tiptap Suggestion + custom Node), soft-delete + undo on
+contacts, a test-send, a missing-value pre-send gate, and an onboarding reorder.
+Design docs live in `specs/002-sender-profile-merge-polish/` (spec, plan, research, data-model,
 contracts/, quickstart). Constitution: `.specify/memory/constitution.md`.
 <!-- SPECKIT END -->
 

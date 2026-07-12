@@ -55,6 +55,30 @@ export type ContactInput = z.infer<typeof ContactInputSchema>;
  *  parsing/POSTing a huge file) and the server validation below (authoritative boundary). */
 export const MAX_IMPORT_ROWS = 5000;
 
+/** Max explicit ids accepted in one bulk-delete request (matchAll has no such bound). */
+export const MAX_BULK_DELETE_IDS = 1000;
+
+/**
+ * Bulk-delete request (feature 002, US4, FR-020). Exactly one of `ids` (loaded-row selection)
+ * or `matchAll` (everything matching the current search) is required.
+ */
+export const BulkDeleteRequestSchema = z
+  .object({
+    ids: z.array(z.string().min(1)).max(MAX_BULK_DELETE_IDS, "too many contacts in one delete").optional(),
+    matchAll: z.boolean().optional(),
+    query: z.string().optional(),
+    excludedIds: z.array(z.string().min(1)).optional(),
+  })
+  .refine((d) => (Array.isArray(d.ids) && d.ids.length > 0) || d.matchAll === true, {
+    message: "Provide ids or matchAll.",
+    path: ["ids"],
+  });
+export type BulkDeleteRequest = z.infer<typeof BulkDeleteRequestSchema>;
+
+/** Undo request: restore one soft-deleted batch (FR-023). */
+export const RestoreRequestSchema = z.object({ deletedBatch: z.string().min(1) });
+export type RestoreRequest = z.infer<typeof RestoreRequestSchema>;
+
 /** Body of POST /api/contacts/import — the server re-validates the parsed rows. */
 export const ImportRequestSchema = z.object({
   source: z.enum(IMPORT_SOURCES),
