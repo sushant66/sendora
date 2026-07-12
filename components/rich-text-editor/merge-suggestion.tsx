@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, useImperativeHandle, useState, Fragment } from "react";
+import { forwardRef, useImperativeHandle, useState, useEffect, useRef, Fragment } from "react";
 import { Extension } from "@tiptap/core";
 import Suggestion from "@tiptap/suggestion";
 import { ReactRenderer } from "@tiptap/react";
@@ -54,6 +54,19 @@ export function SlashMenuList({
   activeIndex: number;
   onSelect: (token: string) => void;
 }) {
+  // Keyboard focus stays in the editor, so the listbox never auto-scrolls to its
+  // aria-activedescendant. Keep the highlighted option in view ourselves on every move.
+  const activeRef = useRef<HTMLLIElement | null>(null);
+  useEffect(() => {
+    const el = activeRef.current;
+    if (!el) return;
+    // If the highlighted option is the first under its group header, scroll the header
+    // into view too, so the group label ("Recipient" / "Your details") stays legible.
+    const prev = el.previousElementSibling;
+    const target = prev?.classList.contains("sendora-slash-group") ? prev : el;
+    target.scrollIntoView({ block: "nearest" });
+  }, [activeIndex]);
+
   return (
     <ul
       role="listbox"
@@ -70,6 +83,7 @@ export function SlashMenuList({
           )}
           <li
             id={`merge-opt-${i}`}
+            ref={i === activeIndex ? activeRef : null}
             role="option"
             aria-selected={i === activeIndex}
             className={`sendora-slash-option${i === activeIndex ? " is-active" : ""}`}
@@ -198,6 +212,11 @@ export const MergeSuggestion = Extension.create({
               });
               popup = document.createElement("div");
               popup.className = "sendora-slash-popup";
+              // The popup is portaled out of the React tree (to <body> or a top-layer <dialog>),
+              // both potentially OUTSIDE the [data-astryx-theme] subtree where every theme token
+              // (colors, sizes, --font-family-body) is declared. Mark the popup as its own theme
+              // scope root so those tokens resolve here regardless of where it lands.
+              popup.setAttribute("data-astryx-theme", "neutral");
               popup.appendChild(renderer.element);
               // A native <dialog> (Astryx Dialog) renders in the top layer, above anything on
               // document.body regardless of z-index. Mount the popup INSIDE that dialog when the

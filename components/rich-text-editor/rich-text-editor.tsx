@@ -152,7 +152,9 @@ function EditorStyles() {
       .sendora-rte-toolbar { padding: var(--spacing-1) var(--spacing-2); background: var(--color-background-muted); border-bottom: var(--border-width) solid var(--color-border); }
       .sendora-rte-toolbar > * { margin: 0 !important; }
       .sendora-rte-linkbar { padding: var(--spacing-2) var(--spacing-3); border-bottom: var(--border-width) solid var(--color-border); }
-      .sendora-rte-content { padding: var(--spacing-3) var(--spacing-4); min-height: calc(var(--spacing-12) * 4); outline: none; color: var(--color-text-primary); font-size: var(--font-size-base); line-height: 1.6; }
+      /* Raw ProseMirror surface: no Astryx text primitive wraps it, so it must name the
+         body font itself (nothing sets font-family on html/body; the UA default is serif). */
+      .sendora-rte-content { padding: var(--spacing-3) var(--spacing-4); min-height: calc(var(--spacing-12) * 4); outline: none; color: var(--color-text-primary); font-family: var(--font-family-body); font-size: var(--font-size-base); line-height: 1.6; }
       .sendora-rte-content p { margin: 0 0 var(--spacing-2); }
       .sendora-rte-content ul, .sendora-rte-content ol { margin: 0 0 var(--spacing-2); padding-inline-start: var(--spacing-6); }
       .sendora-rte-content a { color: var(--color-text-accent); text-decoration: underline; }
@@ -189,10 +191,14 @@ function EditorStyles() {
         border: var(--border-width) solid var(--color-border-emphasized);
         border-radius: var(--radius-element);
         box-shadow: var(--shadow-overlay, 0 8px 24px rgba(0,0,0,0.18));
+        /* Raw <ul>/<li>, no Astryx text primitive: name the body font (or it falls back to
+           serif) and anchor the base size to the theme scale (or it inherits the UA 16px). */
+        font-family: var(--font-family-body);
+        font-size: var(--font-size-sm);
       }
       .sendora-slash-group {
         padding: var(--spacing-1) var(--spacing-2);
-        font-size: var(--font-size-xsm);
+        font-size: var(--font-size-xs);
         font-weight: var(--font-weight-medium);
         color: var(--color-text-secondary);
         text-transform: uppercase;

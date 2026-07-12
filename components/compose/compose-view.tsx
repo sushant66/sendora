@@ -30,6 +30,8 @@ import { computeMissingValues, type MissingValueReport } from "@/lib/compose/mis
 import { MERGE_FIELD_BY_TOKEN } from "@/lib/templates/fields";
 import { RichTextEditor } from "@/components/rich-text-editor/rich-text-editor";
 import { InsertFieldMenu } from "@/components/rich-text-editor/insert-field-menu";
+import { ContactFormDialog } from "@/components/contacts/contact-form-dialog";
+import { PlusIcon } from "@/components/app-icons";
 import { takePreselect } from "@/lib/compose/preselect";
 import { EmailPreview } from "./email-preview";
 
@@ -59,6 +61,8 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
   const [isTesting, setIsTesting] = useState(false);
   // Pre-send missing-value gate (FR-016): populated when a send would leave a used field blank.
   const [gate, setGate] = useState<{ report: MissingValueReport; preview: TemplatePreview | null } | null>(null);
+  // Quick "email a recruiter you just got" flow: add a recipient inline without a detour to Contacts.
+  const [addOpen, setAddOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -113,6 +117,14 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
       setSubject(t.subject);
       setBodyHtml(t.bodyHtml);
     }
+  }
+
+  // A recruiter added from inside compose joins the picker and is selected into the send at once,
+  // so the user goes straight from "I just got their email" to sending, with no trip to Contacts.
+  function onRecruiterAdded(contact: Contact) {
+    setContacts((prev) => (prev.some((c) => c.id === contact.id) ? prev : [contact, ...prev]));
+    setContactIds((prev) => (prev.includes(contact.id) ? prev : [...prev, contact.id]));
+    toast({ body: `Added ${contact.name}.` });
   }
 
   const contactsById = useMemo(() => new Map(contacts.map((c) => [c.id, c])), [contacts]);
@@ -281,11 +293,19 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
 
   if (contacts.length === 0) {
     return (
-      <EmptyState
-        title="Add a recruiter first"
-        description="Compose needs at least one contact. Import a list or add one, then come back to send."
-        actions={<Button as={Link} href="/contacts" label="Go to contacts" variant="primary" />}
-      />
+      <>
+        <EmptyState
+          title="Add your first recruiter"
+          description="Add a recruiter to send to right here, or import a whole list from Contacts."
+          actions={
+            <HStack gap={2}>
+              <Button label="Add a recruiter" variant="primary" onClick={() => setAddOpen(true)} />
+              <Button as={Link} href="/contacts" label="Import a list" variant="secondary" />
+            </HStack>
+          }
+        />
+        <ContactFormDialog isOpen={addOpen} onOpenChange={setAddOpen} onSaved={onRecruiterAdded} />
+      </>
     );
   }
 
@@ -328,17 +348,34 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
 
       <Grid columns={{ minWidth: 360 }} gap={5}>
         <VStack gap={4} align="stretch">
-          <MultiSelector
-            label="Recipients"
-            isRequired
-            hasSearch
-            hasClear
-            hasSelectAll
-            placeholder="Choose one or more recruiters"
-            options={contacts.map((c) => ({ value: c.id, label: c.company ? `${c.name} · ${c.company}` : c.name }))}
-            value={contactIds}
-            onChange={setContactIds}
-          />
+          <VStack gap={1} align="stretch">
+            <HStack justify="between" align="center">
+              <HStack gap={1} align="center">
+                <Text size="sm" weight="medium">Recipients</Text>
+                <Text size="sm" color="secondary">· Required</Text>
+              </HStack>
+              <Button
+                label="New recruiter"
+                icon={<PlusIcon width={16} height={16} />}
+                variant="secondary"
+                size="sm"
+                onClick={() => setAddOpen(true)}
+                tooltip="Add a recruiter who isn't in your list yet"
+              />
+            </HStack>
+            <MultiSelector
+              label="Recipients"
+              isLabelHidden
+              isRequired
+              hasSearch
+              hasClear
+              hasSelectAll
+              placeholder="Choose one or more recruiters"
+              options={contacts.map((c) => ({ value: c.id, label: c.company ? `${c.name} · ${c.company}` : c.name }))}
+              value={contactIds}
+              onChange={setContactIds}
+            />
+          </VStack>
           <Selector
             label="Template"
             hasSearch
@@ -425,9 +462,12 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
             fromEmail={account?.emailAddress}
             toEmail={previewContact?.email}
             isEmpty={contactIds.length === 0 || !hasContent}
+            canCopy
           />
         </VStack>
       </Grid>
+
+      <ContactFormDialog isOpen={addOpen} onOpenChange={setAddOpen} onSaved={onRecruiterAdded} />
     </VStack>
   );
 }

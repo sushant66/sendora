@@ -27,6 +27,13 @@ function base(props: SVGProps<SVGSVGElement>) {
   };
 }
 
+/** Plus: a leading affordance for "add" actions so the control reads as a button, not text. */
+export const PlusIcon: Glyph = (props) => (
+  <svg {...base(props)}>
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+);
+
 /** Sendora brand mark: an upward paper plane — composed, deliberate sending. */
 export const BrandMark: Glyph = (props) => (
   <svg {...base(props)}>

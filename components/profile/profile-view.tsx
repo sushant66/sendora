@@ -11,7 +11,7 @@ import { Button } from "@astryxdesign/core/Button";
 import { TextInput } from "@astryxdesign/core/TextInput";
 import { TextArea } from "@astryxdesign/core/TextArea";
 import { Selector } from "@astryxdesign/core/Selector";
-import { Banner } from "@astryxdesign/core/Banner";
+import { useToast } from "@astryxdesign/core/Toast";
 import { ApiError, apiRequest } from "@/lib/api/client";
 import type { SenderProfile } from "@/lib/profile/types";
 
@@ -47,29 +47,28 @@ export function ProfileView({
   const [form, setForm] = useState<FormState>(() => toForm(initialProfile));
   const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({});
   const [isSaving, setIsSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const toast = useToast();
 
   const set = (field: FieldName) => (value: string) => {
     setForm((f) => ({ ...f, [field]: value }));
     setErrors((e) => (e[field] ? { ...e, [field]: undefined } : e));
-    setSaved(false);
-    setFailed(false);
   };
 
   async function save() {
     setIsSaving(true);
     setErrors({});
-    setFailed(false);
     try {
       const result = await apiRequest<SenderProfile>("/api/profile", { method: "PUT", json: form });
       setForm(toForm(result));
-      setSaved(true);
+      // Toast, not an inline banner: the Save button sits at the bottom of a long form, so
+      // feedback must reach the user wherever they are, not only if they scroll back up.
+      toast({ body: "Profile saved. Your details will fill your outreach from now on." });
     } catch (err) {
       if (err instanceof ApiError && err.status === 422 && err.body.fields) {
         setErrors(err.body.fields as Partial<Record<FieldName, string>>);
+        toast({ body: "Please fix the highlighted fields and save again.", type: "error" });
       } else {
-        setFailed(true);
+        toast({ body: "Couldn't save your profile. Please try again.", type: "error" });
       }
     } finally {
       setIsSaving(false);
@@ -92,13 +91,6 @@ export function ProfileView({
           outreach sounds like you. Everything here is optional and never blocks a send.
         </Text>
       </VStack>
-
-      {saved && (
-        <Banner status="success" container="card" title="Profile saved" description="Your details will fill your outreach from now on." />
-      )}
-      {failed && (
-        <Banner status="warning" container="card" title="Could not save" description="Something went wrong. Please try again." />
-      )}
 
       <form
         onSubmit={(e) => {

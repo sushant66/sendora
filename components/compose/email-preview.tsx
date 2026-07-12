@@ -1,10 +1,14 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { Card } from "@astryxdesign/core/Card";
 import { VStack } from "@astryxdesign/core/VStack";
+import { HStack } from "@astryxdesign/core/HStack";
 import { Text } from "@astryxdesign/core/Text";
 import { Heading } from "@astryxdesign/core/Heading";
 import { Banner } from "@astryxdesign/core/Banner";
+import { Button } from "@astryxdesign/core/Button";
+import { Icon } from "@astryxdesign/core/Icon";
 import { Divider } from "@astryxdesign/core/Divider";
 import { EmptyState } from "@astryxdesign/core/EmptyState";
 import type { TemplatePreview } from "@/lib/templates/types";
@@ -20,6 +24,7 @@ export function EmailPreview({
   toEmail,
   isEmpty,
   hideWarnings = false,
+  canCopy = false,
 }: {
   preview: TemplatePreview | null;
   fromEmail?: string;
@@ -28,12 +33,51 @@ export function EmailPreview({
   /** Suppress the per-recipient warning banner when a caller already summarizes them
    *  (e.g. the pre-send gate shows one summary above this preview). */
   hideWarnings?: boolean;
+  /** Offer a "Copy text" action (the compose preview); off inside the pre-send gate,
+   *  where the preview is a decision aid, not something to copy out. */
+  canCopy?: boolean;
 }) {
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [copied, setCopied] = useState(false);
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (resetTimer.current) clearTimeout(resetTimer.current); }, []);
+
+  async function copyText() {
+    // Read the rendered body so the copied text keeps its line breaks (innerText, not the raw
+    // HTML). Prefix the subject so the clipboard holds the whole email, ready to paste.
+    const body = bodyRef.current?.innerText.trim() ?? "";
+    const subject = preview?.subject?.trim();
+    const text = subject ? `${subject}\n\n${body}` : body;
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      if (resetTimer.current) clearTimeout(resetTimer.current);
+      resetTimer.current = setTimeout(() => setCopied(false), 1600);
+    } catch {
+      /* clipboard blocked (permissions / insecure context): leave the button unchanged */
+    }
+  }
+
+  const showCopy = canCopy && !isEmpty && !!preview;
+
   return (
     <Card padding={5}>
       <PreviewStyles />
       <VStack gap={3} align="stretch">
-        <Text size="sm" color="secondary" weight="medium">Preview</Text>
+        <HStack justify="between" align="center" gap={2}>
+          <Text size="sm" color="secondary" weight="medium">Preview</Text>
+          {showCopy && (
+            <Button
+              label={copied ? "Copied" : "Copy text"}
+              icon={<Icon icon={copied ? "checkDouble" : "copy"} size="sm" />}
+              variant="secondary"
+              size="sm"
+              onClick={copyText}
+              tooltip="Copy this email's text to your clipboard"
+            />
+          )}
+        </HStack>
         {isEmpty || !preview ? (
           <EmptyState
             isCompact
@@ -49,6 +93,7 @@ export function EmailPreview({
             </VStack>
             <Divider />
             <div
+              ref={bodyRef}
               className="sendora-email-body"
               // Safe: preview.bodyHtml is server-sanitized by /api/templates/preview (lib/sanitize).
               dangerouslySetInnerHTML={{ __html: preview.bodyHtml }}
