@@ -26,7 +26,8 @@ rendering. The slash menu and the merge chip are a Tiptap Suggestion extension p
 atomic Node, themed with Astryx tokens and held to the existing rich-text accessibility bar.
 Zod validates every new trust boundary; Vitest + Playwright keep delivery test-first. The
 custom UI surfaces (profile page, slash menu + chip, bulk-select bar, missing-value gate) are
-designed and hardened with `/impeccable` during implementation.
+built through `/impeccable` as they are implemented, so design and structure land together, not
+in a later polish pass.
 
 ## Technical Context
 
@@ -73,7 +74,7 @@ Evaluated against Sendora Constitution v1.1.0.
 | I. Type Safety & Simplicity | End-to-end TS `strict`; Zod validates every new boundary (profile CRUD, bulk-delete request, undo request, test-send request, missing-value preview input). No `any`. The sender vocabulary reuses the existing closed-vocabulary merge engine rather than a new templating layer (YAGNI). Two justified structural additions tracked below. | PASS |
 | II. Test-First (NON-NEGOTIABLE) | Vitest + Playwright already configured. Each story delivered test-first: unit (sender-field render + warnings, missing-value computation, soft-delete/undo, subject/body token insertion), integration (profile CRUD, bulk delete + undo + commit boundary, test send excluded from history), E2E per story. | PASS |
 | III. Accessibility by Default | The slash menu and merge chip are the custom interactive surfaces, held to WCAG 2.1 AA: the menu is a labelled listbox with full keyboard navigation and Escape to dismiss; the chip is a focusable, labelled inline element with an accessible name (its field label) and is deletable as a unit. The bulk-select bar and profile form use Astryx primitives. | PASS |
-| IV. UX Consistency via Design System | All UI built from Astryx components + theme tokens. The slash menu, chip, and select-all bar are themed with tokens (no raw hex/px). The Tiptap Suggestion + Node is a functional dependency wrapped and themed, consistent with the 001 justification for Tiptap. Design craft delivered via `/impeccable`. | PASS |
+| IV. UX Consistency via Design System | All UI built from Astryx components + theme tokens. The slash menu, chip, and select-all bar are themed with tokens (no raw hex/px). The Tiptap Suggestion + Node is a functional dependency wrapped and themed, consistent with the 001 justification for Tiptap. Each custom surface is built through `/impeccable` (design while building, not after). | PASS |
 | V. Plain, Human Copy | No em-dash in any new copy, starter template, or email content. The rewritten "cold outreach" starter (FR-017) and all new banners/toasts follow the plain-voice rule. | PASS |
 
 **Technology stack alignment**: Next.js + Astryx + NeonDB unchanged. The only new runtime

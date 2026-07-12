@@ -75,8 +75,10 @@ Key unit specs to author first:
 - Profile form, selection bar, and gate dialog use Astryx primitives; verify focus order and
   visible focus.
 
-## Design pass (`/impeccable`)
+## Design with `/impeccable` (while building, not after)
 
-Run `/impeccable` on the four custom surfaces once functional: the profile page, the slash menu +
-chip styling, the contacts selection bar + undo toast, and the missing-value gate. Keep all
-styling on Astryx tokens (no raw hex/px), no em-dash in copy.
+Build each custom surface *through* `/impeccable` in the same task, so structure and craft land
+together: the profile page, the slash menu + chip, the contacts selection bar + undo toast, and
+the missing-value gate. Do not defer design to a later polish pass. Keep all styling on Astryx
+tokens (no raw hex/px), no em-dash in copy, and hold the slash menu + chip to WCAG 2.1 AA as
+they are built.
