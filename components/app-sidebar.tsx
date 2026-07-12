@@ -22,12 +22,14 @@ import {
   HistoryIcon,
   HomeIcon,
   MailIcon,
+  ResumesIcon,
   TemplatesIcon,
 } from "./app-icons";
 
 const OUTREACH = [
   { label: "Contacts", href: "/contacts", icon: ContactsIcon },
   { label: "Templates", href: "/templates", icon: TemplatesIcon },
+  { label: "Resumes", href: "/resumes", icon: ResumesIcon },
   { label: "Compose", href: "/compose", icon: ComposeIcon },
   { label: "History", href: "/history", icon: HistoryIcon },
 ] as const;

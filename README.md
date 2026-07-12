@@ -23,20 +23,25 @@ someone.
   successful sends).
 - **History** — every send with recipient, template, time, and outcome; a re-contact
   warning before you email someone again.
+- **Resumes** — upload labeled resume PDF variants ("Backend Engineer," "Full Stack,"
+  "DevOps"), browse and open them, and replace one without losing the previous version:
+  older versions become retrievable history and can be restored.
 
 ## Tech stack
 
 - **Next.js** (App Router, React 19) + **TypeScript** (`strict`)
 - **[Astryx](https://astryx.design)** design system (all UI + theming; see `DESIGN.md`)
 - **NeonDB** (serverless Postgres) via **Drizzle ORM**
+- **Cloudflare R2** (S3-compatible object storage) for resume PDF bytes
 - **Auth.js** (NextAuth v5) + Google OAuth for login and the `gmail.send` grant
 - **Gmail API** behind a provider-agnostic `EmailProvider` seam
 - **Zod** at every trust boundary · **Tiptap** rich-text · **Vitest** + **Playwright** tests
 
 ## Getting started
 
-Requires Node.js 20 LTS, [pnpm](https://pnpm.io), a NeonDB database, and a Google Cloud
-OAuth 2.0 client with the Gmail API enabled.
+Requires Node.js 20 LTS, [pnpm](https://pnpm.io), a NeonDB database, a Google Cloud
+OAuth 2.0 client with the Gmail API enabled, and a Cloudflare R2 bucket (for resume
+storage).
 
 ```bash
 pnpm install
@@ -51,7 +56,8 @@ pnpm dev                        # http://localhost:3000
 
 All variables are validated at startup by `EnvSchema` (the app fails fast if any are
 missing or malformed). See `.env.example` for the full list: `DATABASE_URL`, `AUTH_SECRET`,
-`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `TOKEN_ENCRYPTION_KEY`, `APP_URL`.
+`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `TOKEN_ENCRYPTION_KEY`, `APP_URL`,
+`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`.
 
 Configure the Google OAuth client's authorized redirect URIs to include:
 
@@ -73,7 +79,9 @@ pnpm lint           # ESLint incl. design-system usage (Constitution IV)
 - `PRODUCT.md` — who it's for, product purpose, design principles.
 - `DESIGN.md` — how the Astryx design system is used (the enforced visual system).
 - `docs/architecture.md` — how the code is organized and why.
-- `specs/001-recruiter-outreach/` — the full spec, plan, data model, and API contracts.
+- `specs/001-recruiter-outreach/` — the full spec, plan, data model, and API contracts
+  for recruiter outreach.
+- `specs/002-resume-storage/` — the same, for resume storage.
 - `.specify/memory/constitution.md` — the engineering principles that govern the build.
 
 ## Contributing

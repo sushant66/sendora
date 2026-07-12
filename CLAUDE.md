@@ -1,13 +1,17 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-`specs/001-recruiter-outreach/plan.md`
+`specs/002-resume-storage/plan.md`
 
-Active feature: **Recruiter Outreach** (`001-recruiter-outreach`).
-Stack: Next.js (App Router, TS strict) + Astryx (React/StyleX) + NeonDB (Drizzle ORM);
-Auth.js + Google OAuth (`gmail.send`); sending behind a provider-agnostic seam.
-Design docs live in `specs/001-recruiter-outreach/` (spec, plan, research, data-model,
+Active feature: **Resume Storage** (`002-resume-storage`).
+Stack: Next.js (App Router, TS strict) + Astryx (React/StyleX) + NeonDB (Drizzle ORM) for
+metadata + Cloudflare R2 (S3-compatible object storage) for PDF bytes.
+Design docs live in `specs/002-resume-storage/` (spec, plan, research, data-model,
 contracts/, quickstart). Constitution: `.specify/memory/constitution.md`.
+
+Previous feature: **Recruiter Outreach** (`001-recruiter-outreach`, shipped) — see
+`specs/001-recruiter-outreach/` for its design docs (Auth.js + Google OAuth `gmail.send`,
+provider-agnostic `EmailProvider` seam).
 <!-- SPECKIT END -->
 
 <!-- ASTRYX:START -->

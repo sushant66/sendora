@@ -70,6 +70,15 @@ export const HistoryIcon: Glyph = (props) => (
   </svg>
 );
 
+/** Stacked documents: multiple labeled resume variants, distinct from TemplatesIcon's single page. */
+export const ResumesIcon: Glyph = (props) => (
+  <svg {...base(props)}>
+    <path d="M8.5 3.5h6L18 7v11a1 1 0 0 1-1 1H8.5a1 1 0 0 1-1-1v-13.5a1 1 0 0 1 1-1Z" />
+    <path d="M14.5 3.5V7H18" />
+    <path d="M5 7.5v12.5a1 1 0 0 0 1 1h8" />
+  </svg>
+);
+
 export const MailIcon: Glyph = (props) => (
   <svg {...base(props)}>
     <rect x="3.5" y="5.5" width="17" height="13" rx="1.5" />
