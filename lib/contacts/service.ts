@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { db as defaultDb, type Db } from "@/lib/db/client";
 import { recruiterContacts, type RecruiterContactRow } from "@/lib/db/schema";
 import { ConflictError, NotFoundError } from "@/lib/errors";
@@ -52,7 +52,7 @@ function decodeCursor(cursor: string): { createdAt: Date; id: string } | null {
 
 export async function listContacts(
   userId: string,
-  opts: { query?: string; cursor?: string } = {},
+  opts: { query?: string; cursor?: string; all?: boolean } = {},
   db: Db = defaultDb,
 ): Promise<ContactList> {
   const filters = [eq(recruiterContacts.userId, userId)];
@@ -67,6 +67,17 @@ export async function listContacts(
         ilike(recruiterContacts.company, like),
       )!,
     );
+  }
+
+  // Compose needs the full set at once so its recipient picker (and "select all") can act on
+  // every contact, not just the first page. Callers browsing a long list keep the keyset cursor.
+  if (opts.all) {
+    const rows = await db
+      .select()
+      .from(recruiterContacts)
+      .where(and(...filters))
+      .orderBy(desc(recruiterContacts.createdAt), desc(recruiterContacts.id));
+    return { items: rows.map(toContact), nextCursor: null };
   }
 
   const cursor = opts.cursor ? decodeCursor(opts.cursor) : null;
@@ -199,5 +210,33 @@ export async function importContacts(
     );
   }
 
-  return { imported: summary.valid.length, duplicates: summary.duplicates, invalid: summary.invalid };
+  // The batch the user meant to email: the rows we just created plus the duplicates that
+  // already existed as contacts. Resolve them to IDs (new + pre-existing) in one query so the
+  // import screen can offer "Compose to these contacts". Ordered to mirror the imported list.
+  const batchEmails: string[] = [];
+  const seen = new Set<string>();
+  for (const c of summary.valid) {
+    if (!seen.has(c.emailNormalized)) { seen.add(c.emailNormalized); batchEmails.push(c.emailNormalized); }
+  }
+  for (const d of summary.duplicates) {
+    const n = normalizeEmail(d.email);
+    if (!seen.has(n)) { seen.add(n); batchEmails.push(n); }
+  }
+
+  let contactIds: string[] = [];
+  if (batchEmails.length > 0) {
+    const rows = await db
+      .select({ id: recruiterContacts.id, emailNormalized: recruiterContacts.emailNormalized })
+      .from(recruiterContacts)
+      .where(and(eq(recruiterContacts.userId, userId), inArray(recruiterContacts.emailNormalized, batchEmails)));
+    const idByEmail = new Map(rows.map((r) => [r.emailNormalized, r.id]));
+    contactIds = batchEmails.map((e) => idByEmail.get(e)).filter((id): id is string => Boolean(id));
+  }
+
+  return {
+    imported: summary.valid.length,
+    duplicates: summary.duplicates,
+    invalid: summary.invalid,
+    contactIds,
+  };
 }

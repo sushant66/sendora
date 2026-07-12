@@ -22,8 +22,10 @@ import type { Contact, ContactList } from "@/lib/contacts/types";
 import type { Template, TemplatePreview } from "@/lib/templates/types";
 import type { AccountStatus } from "@/lib/email/types";
 import type { SendResultItem, SendSummary } from "@/lib/send/types";
+import { MAX_SEND_RECIPIENTS } from "@/lib/validation/send";
 import type { RecontactInfo } from "@/lib/history/types";
 import { RichTextEditor } from "@/components/rich-text-editor/rich-text-editor";
+import { takePreselect } from "@/lib/compose/preselect";
 import { EmailPreview } from "./email-preview";
 
 const PREVIEW_DEBOUNCE_MS = 350;
@@ -50,13 +52,37 @@ export function ComposeView() {
     (async () => {
       try {
         const [c, t, a] = await Promise.all([
-          apiRequest<ContactList>("/api/contacts"),
+          apiRequest<ContactList>("/api/contacts?all=1"),
           apiRequest<{ items: Template[] }>("/api/templates"),
           apiRequest<AccountStatus>("/api/email-account"),
         ]);
         setContacts(c.items);
         setTemplates(t.items);
         setAccount(a);
+
+        // Pick up a batch handed off from the import screen and pre-fill the recipients, so the
+        // user doesn't re-select the list they just imported. Keep only IDs that still exist,
+        // and say so honestly if any were dropped (e.g. deleted between import and here).
+        const preselect = takePreselect();
+        if (preselect.length > 0) {
+          const known = new Set(c.items.map((x) => x.id));
+          const valid = preselect.filter((id) => known.has(id));
+          const dropped = preselect.length - valid.length;
+          if (valid.length > 0) {
+            setContactIds(valid);
+            toast({
+              body:
+                dropped > 0
+                  ? `Added ${valid.length} of ${preselect.length} imported recruiters. ${dropped} could not be found.`
+                  : `Added ${valid.length} recruiter${valid.length === 1 ? "" : "s"} from your import.`,
+              type: dropped > 0 ? "error" : undefined,
+            });
+          } else {
+            // Every handed-off contact vanished before we got here (e.g. deleted). Don't leave
+            // the user staring at a blank recipient field wondering why nothing was selected.
+            toast({ body: "Those recruiters could not be found. They may have been deleted.", type: "error" });
+          }
+        }
       } catch {
         toast({ body: "Couldn't load compose data.", type: "error" });
       } finally {
@@ -112,7 +138,10 @@ export function ComposeView() {
     let cancelled = false;
     (async () => {
       try {
-        const info = await apiRequest<RecontactInfo>(`/api/history/recontact?contactIds=${contactIds.map(encodeURIComponent).join(",")}`);
+        const info = await apiRequest<RecontactInfo>("/api/history/recontact", {
+          method: "POST",
+          json: { contactIds },
+        });
         if (!cancelled) setRecontact(info);
       } catch {
         /* leave prior info; render filters by current selection */
@@ -123,7 +152,10 @@ export function ComposeView() {
 
   const alreadyContacted = (recontact?.previouslyContacted ?? []).filter((p) => contactIds.includes(p.contactId));
 
-  const canSend = contactIds.length > 0 && hasContent && account?.connected === true && !isSending;
+  // Select-all makes it easy to pick more than a single send allows (FR / SendRequestSchema cap),
+  // so guard it here with clear feedback instead of letting the send fail server-side.
+  const overRecipientLimit = contactIds.length > MAX_SEND_RECIPIENTS;
+  const canSend = contactIds.length > 0 && hasContent && account?.connected === true && !isSending && !overRecipientLimit;
   const isBulk = contactIds.length > 1;
 
   async function send() {
@@ -230,6 +262,7 @@ export function ComposeView() {
             isRequired
             hasSearch
             hasClear
+            hasSelectAll
             placeholder="Choose one or more recruiters"
             options={contacts.map((c) => ({ value: c.id, label: c.company ? `${c.name} · ${c.company}` : c.name }))}
             value={contactIds}
@@ -246,12 +279,14 @@ export function ComposeView() {
           <TextInput label="Subject" value={subject} onChange={setSubject} placeholder="Subject line" />
           <RichTextEditor key={templateId || "blank"} label="Body" value={bodyHtml} onChange={setBodyHtml} />
           <HStack justify="between" align="center" gap={3}>
-            <Text color="secondary" size="sm">
+            <Text color={overRecipientLimit ? "primary" : "secondary"} size="sm">
               {contactIds.length === 0
                 ? "No recipients selected"
-                : isBulk
-                  ? `${contactIds.length} recruiters, each gets a separate, personalized email`
-                  : "1 recruiter"}
+                : overRecipientLimit
+                  ? `Too many recipients. Send to up to ${MAX_SEND_RECIPIENTS} at once (remove ${(contactIds.length - MAX_SEND_RECIPIENTS).toLocaleString()}).`
+                  : isBulk
+                    ? `${contactIds.length} recruiters, each gets a separate, personalized email`
+                    : "1 recruiter"}
             </Text>
             <Button
               label={isBulk ? `Send ${contactIds.length} emails` : "Send email"}
@@ -259,7 +294,13 @@ export function ComposeView() {
               onClick={send}
               isLoading={isSending}
               isDisabled={!canSend}
-              tooltip={account?.connected ? undefined : "Connect your Gmail to send"}
+              tooltip={
+                !account?.connected
+                  ? "Connect your Gmail to send"
+                  : overRecipientLimit
+                    ? `Remove ${(contactIds.length - MAX_SEND_RECIPIENTS).toLocaleString()} recipients to send`
+                    : undefined
+              }
             />
           </HStack>
         </VStack>

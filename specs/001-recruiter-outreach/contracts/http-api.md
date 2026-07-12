@@ -55,12 +55,18 @@ re-validates as the authoritative boundary).
   {
     "imported": 42,
     "duplicates": [{ "row": 5, "email": "a@x.com" }],
-    "invalid":    [{ "row": 8, "reason": "missing/invalid email" }]
+    "invalid":    [{ "row": 8, "reason": "missing/invalid email" }],
+    "contactIds": ["<uuid>", "..."]
   }
   ```
 - Rule: valid rows import even when others are invalid/duplicate (never all-or-nothing);
   every skipped row is reported (FR-006). Empty/oversized/unrecognized payloads → `422`
   with a clear reason (Edge Cases).
+- `contactIds` is the emailable batch (new rows plus duplicates that already existed as
+  contacts), so the client can offer "Compose to these contacts" without re-selection.
+
+`GET /api/contacts?all=1` returns the full contact set unpaginated (`nextCursor: null`),
+used by Compose so its recipient picker and select-all act on every contact.
 
 `Contact = { id, name, email, company|null, role|null, source, createdAt }`
 
@@ -136,6 +142,8 @@ Lists the caller's send records, newest first.
   (`contactId` is null when the recruiter was later deleted — history rows are immutable
   snapshots and the `recipientEmail` snapshot preserves who it went to.)
 
-### `GET /api/history/recontact?contactIds=`
+### `POST /api/history/recontact`
 Given contacts being composed to, returns which were previously emailed (FR-021).
+- Body: `{ contactIds: ["<uuid>", "..."] }` (POST, not a query string, so a large recipient
+  selection can't overflow the URL and silently drop the warning)
 - **200** → `{ previouslyContacted: [{ contactId, lastSentAt }] }`

@@ -51,6 +51,10 @@ export const ContactInputSchema = z.object({
 });
 export type ContactInput = z.infer<typeof ContactInputSchema>;
 
+/** Max rows accepted in a single import. Shared by the client-side guard (fail fast, before
+ *  parsing/POSTing a huge file) and the server validation below (authoritative boundary). */
+export const MAX_IMPORT_ROWS = 5000;
+
 /** Body of POST /api/contacts/import — the server re-validates the parsed rows. */
 export const ImportRequestSchema = z.object({
   source: z.enum(IMPORT_SOURCES),
@@ -64,6 +68,6 @@ export const ImportRequestSchema = z.object({
       }),
     )
     .min(1, "no rows to import")
-    .max(5000, "too many rows in one import"),
+    .max(MAX_IMPORT_ROWS, "too many rows in one import"),
 });
 export type ImportRequest = z.infer<typeof ImportRequestSchema>;
