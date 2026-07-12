@@ -156,13 +156,20 @@ export function ContactsView() {
         { method: "POST", json: body },
       );
 
-      // Update the loaded list. For matchAll we don't know exactly which loaded rows matched, so reload.
+      // Update the loaded list. For matchAll we don't know exactly which loaded rows matched, so
+      // reload. For ids, drop them locally; but if that empties the page while more exist
+      // server-side, reload so we never show a false "No contacts yet" (a full-page delete).
       if (pendingDelete.mode === "selection" && selectAllMatching) {
         await load(query);
       } else {
         const removed = new Set(pendingDelete.mode === "single" ? [pendingDelete.contact.id] : [...selectedIds]);
-        setContacts((prev) => prev.filter((c) => !removed.has(c.id)));
+        const remaining = contacts.filter((c) => !removed.has(c.id));
         clearSelection();
+        if (remaining.length === 0 && nextCursor) {
+          await load(query);
+        } else {
+          setContacts(remaining);
+        }
       }
       setPendingDelete(null);
 
@@ -171,7 +178,14 @@ export function ContactsView() {
         uniqueID: "contacts-undo",
         autoHideDuration: UNDO_MS,
         body: `Deleted ${count} contact${count === 1 ? "" : "s"}.`,
-        endContent: <Button label="Undo" variant="ghost" size="sm" onClick={() => void undoDelete(deletedBatch)} />,
+        // The Toast surface renders Astryx's secondary button borderless, so it reads as text.
+        // An outlined control (border via currentColor) makes "Undo" unmistakably a button on
+        // the toast, whatever its surface color.
+        endContent: (
+          <button type="button" className="sendora-undo-action" onClick={() => void undoDelete(deletedBatch)}>
+            Undo
+          </button>
+        ),
       });
     } catch (err) {
       const gone = err instanceof ApiError && err.status === 404;
@@ -227,6 +241,7 @@ export function ContactsView() {
 
   return (
     <VStack gap={5}>
+      <ContactsStyles />
       <HStack justify="between" align="center" gap={4}>
         <VStack gap={1}>
           <Heading level={1}>Contacts</Heading>
@@ -360,7 +375,8 @@ function SelectionBar({
             {count === null ? "All matching contacts selected" : `${count} selected`}
           </Text>
           {canSelectAllMatching && (
-            <Button label="Select all matching" variant="ghost" size="sm" onClick={onSelectAllMatching} />
+            // Secondary (bordered) so it reads as a control, not a continuation of the count text.
+            <Button label="Select all matching" variant="secondary" size="sm" onClick={onSelectAllMatching} />
           )}
         </HStack>
         <HStack gap={2} align="center">
@@ -383,6 +399,28 @@ function SelectionBarStyles() {
       @media (prefers-reduced-motion: reduce) {
         .sendora-selection-bar { animation: none; }
       }
+    `}</style>
+  );
+}
+
+/** Persistent styles the imperative undo toast relies on (it has no component to host them).
+ *  currentColor adapts the outline to the toast's own text color on any surface. */
+function ContactsStyles() {
+  return (
+    <style>{`
+      .sendora-undo-action {
+        border: var(--border-width) solid currentColor;
+        border-radius: var(--radius-element);
+        padding: var(--spacing-1) var(--spacing-3);
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        font-weight: 600;
+        line-height: 1.3;
+        cursor: pointer;
+      }
+      .sendora-undo-action:hover { background: color-mix(in oklch, currentColor 12%, transparent); }
+      .sendora-undo-action:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
     `}</style>
   );
 }
