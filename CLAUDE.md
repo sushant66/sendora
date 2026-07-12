@@ -4,17 +4,20 @@ shell commands, and other important information, read the current plan:
 `specs/003-resume-attachments/plan.md`
 
 Active feature: **Resume Attachments** (`003-resume-attachments`).
-Stack: unchanged (Next.js + Astryx + NeonDB/Drizzle + Cloudflare R2 + Gmail
-`EmailProvider`). Connects 002-resume-storage's saved resumes to 001-recruiter-outreach's
+Stack: Next.js (App Router, TS strict) + Astryx (React/StyleX) + NeonDB (Drizzle ORM) +
+Cloudflare R2 + Gmail `EmailProvider`. Connects 002-resume-storage's saved resumes to the
 send flow: an optional resume attached per send batch (nullable FK on `send_batch`,
 mirroring `templateId`), plus a user-editable resume file name.
 Design docs live in `specs/003-resume-attachments/` (spec, plan, research, data-model,
 contracts/, quickstart). Constitution: `.specify/memory/constitution.md`.
 
 Previous features: **Recruiter Outreach** (`001-recruiter-outreach`, shipped) — Auth.js +
-Google OAuth `gmail.send`, provider-agnostic `EmailProvider` seam. **Resume Storage**
-(`002-resume-storage`, shipped) — labeled PDF resume variants in NeonDB + R2. See each
-feature's `specs/` directory for its design docs.
+Google OAuth `gmail.send`, provider-agnostic `EmailProvider` seam. **Sender profile, merge
+fields & outreach polish** (`002-sender-profile-merge-polish`, shipped) — a `sender_profile`
+table + namespaced `my_*` merge fields, an inline "/" slash-menu picker with atomic merge
+chips, soft-delete + undo on contacts, a test-send, a missing-value pre-send gate. **Resume
+Storage** (`002-resume-storage`, shipped) — labeled PDF resume variants in NeonDB + R2. See
+each feature's `specs/` directory for its design docs.
 <!-- SPECKIT END -->
 
 <!-- ASTRYX:START -->

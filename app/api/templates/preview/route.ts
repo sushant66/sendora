@@ -11,5 +11,5 @@ import { previewTemplate } from "@/lib/templates/preview";
 export const POST = route(async (req: Request) => {
   const user = await requireUser();
   const request = PreviewRequestSchema.parse(await req.json());
-  return ok(await previewTemplate(user.id, request));
+  return ok(await previewTemplate(user.id, request, { senderName: user.name }));
 });

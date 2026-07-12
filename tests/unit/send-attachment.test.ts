@@ -62,6 +62,7 @@ describe("runSendLoop with an attachment", () => {
       provider,
       CREDS,
       undefined,
+      undefined,
       attachment,
     );
     expect(provider.sent).toHaveLength(2);

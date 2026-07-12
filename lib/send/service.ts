@@ -1,11 +1,13 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db as defaultDb, type Db } from "@/lib/db/client";
 import { recruiterContacts, resumes, sendBatches, sendRecords } from "@/lib/db/schema";
 import { ConflictError, NotFoundError } from "@/lib/errors";
 import { normalizeEmail } from "@/lib/validation/contacts";
 import type { SendRequest } from "@/lib/validation/send";
-import { renderTemplate } from "@/lib/templates/merge";
+import { renderTemplate, type SenderContext } from "@/lib/templates/merge";
 import { resolveContent } from "@/lib/templates/preview";
+import { getProfile } from "@/lib/profile/service";
+import { senderContextFromProfile } from "@/lib/profile/context";
 import { getActiveAccount, markAccountExpired } from "@/lib/email/account-service";
 import { resolveProvider } from "@/lib/email/factory";
 import { REAUTH_REQUIRED, type EmailProvider, type OutgoingMessage, type ProviderCredentials } from "@/lib/email/provider";
@@ -101,13 +103,17 @@ export async function runSendLoop(
   provider: EmailProvider,
   credentials: ProviderCredentials,
   onReauthRequired?: () => void | Promise<void>,
+  sender?: SenderContext,
   attachment?: OutgoingMessage["attachment"],
 ): Promise<RenderedSend[]> {
   const out: RenderedSend[] = [];
   let accountDisabled = false;
 
   for (const contact of recipients) {
-    const rendered = renderTemplate(base, { name: contact.name, company: contact.company, role: contact.role });
+    const rendered = renderTemplate(base, {
+      contact: { name: contact.name, company: contact.company, role: contact.role },
+      sender,
+    });
     const record: RenderedSend = {
       contactId: contact.id,
       recipientEmail: contact.email,
@@ -158,7 +164,13 @@ export async function sendEmails(
   const contactRows = await db
     .select()
     .from(recruiterContacts)
-    .where(and(eq(recruiterContacts.userId, userId), inArray(recruiterContacts.id, request.contactIds)));
+    .where(
+      and(
+        eq(recruiterContacts.userId, userId),
+        inArray(recruiterContacts.id, request.contactIds),
+        isNull(recruiterContacts.deletedAt),
+      ),
+    );
   const byId = new Map(contactRows.map((c) => [c.id, c]));
   // Preserve request order (unknown/unowned ids skipped) before dedup.
   const ordered = request.contactIds.map((id) => byId.get(id)).filter((c): c is NonNullable<typeof c> => Boolean(c));
@@ -170,11 +182,16 @@ export async function sendEmails(
     db,
   );
 
+  // Sender (`my_*`) fields resolve from the profile; the display name falls back to the
+  // account name (FR-001). Loaded once and reused across every recipient in the batch.
+  const profile = await getProfile(userId, db);
+  const sender = senderContextFromProfile(profile, fromName);
+
   // 003-resume-attachments: resolve + validate the optional attachment once per batch,
   // before any recipient is contacted (FR-001/FR-005/FR-006).
   const attachment = request.resumeId ? await resolveAttachment(userId, request.resumeId, db, opts.storage) : undefined;
   if (attachment && recipients.length > 0) {
-    const sample = renderTemplate(base, { name: recipients[0]!.name, company: recipients[0]!.company, role: recipients[0]!.role });
+    const sample = renderTemplate(base, { contact: { name: recipients[0]!.name, company: recipients[0]!.company, role: recipients[0]!.role }, sender });
     const sampleMessage: OutgoingMessage = {
       fromEmail: account.row.emailAddress,
       fromName: fromName ?? undefined,
@@ -211,6 +228,7 @@ export async function sendEmails(
     provider,
     account.credentials,
     () => markAccountExpired(account.row.id, db),
+    sender,
     attachment,
   );
 

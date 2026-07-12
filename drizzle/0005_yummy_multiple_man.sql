@@ -1,2 +1,0 @@
-ALTER TABLE "send_batch" ADD COLUMN "attached_resume_id" text;--> statement-breakpoint
-ALTER TABLE "send_batch" ADD CONSTRAINT "send_batch_attached_resume_id_resume_id_fk" FOREIGN KEY ("attached_resume_id") REFERENCES "public"."resume"("id") ON DELETE set null ON UPDATE no action;

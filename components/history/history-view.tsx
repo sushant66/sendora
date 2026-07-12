@@ -225,7 +225,7 @@ export function HistoryView() {
       ) : events.length === 0 ? (
         <EmptyState
           title="No emails sent yet"
-          description="Once you send outreach, each email shows up here — open any one to read exactly what you sent, and its outcome."
+          description="Once you send outreach, each email shows up here. Open any one to read exactly what you sent, and its outcome."
           actions={<Button as={Link} href="/compose" label="Compose an email" variant="primary" />}
         />
       ) : (

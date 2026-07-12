@@ -1,6 +1,6 @@
 {
-  "id": "441f4ecb-b2fa-4edb-a636-a0b381d9179f",
-  "prevId": "40d60524-30e5-4e08-b6be-bb7815819921",
+  "id": "15b93b71-80f2-4d8d-b63f-b1e6e94452dd",
+  "prevId": "78b40217-b49d-4b69-a260-53df656ab925",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -395,6 +395,18 @@
           "primaryKey": false,
           "notNull": true
         },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deleted_batch": {
+          "name": "deleted_batch",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp (3) with time zone",
@@ -428,6 +440,7 @@
             }
           ],
           "isUnique": true,
+          "where": "\"recruiter_contact\".\"deleted_at\" IS NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -446,157 +459,12 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        }
-      },
-      "foreignKeys": {
-        "recruiter_contact_user_id_user_id_fk": {
-          "name": "recruiter_contact_user_id_user_id_fk",
-          "tableFrom": "recruiter_contact",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.resume": {
-      "name": "resume",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
         },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "label": {
-          "name": "label",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "file_name": {
-          "name": "file_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "storage_key": {
-          "name": "storage_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "file_size": {
-          "name": "file_size",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "deleted_at": {
-          "name": "deleted_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "resume_user_active_label_idx": {
-          "name": "resume_user_active_label_idx",
+        "recruiter_contact_deleted_batch_idx": {
+          "name": "recruiter_contact_deleted_batch_idx",
           "columns": [
             {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "label",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"resume\".\"deleted_at\" is null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "resume_user_label_version_idx": {
-          "name": "resume_user_label_version_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "label",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "version",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "resume_user_label_idx": {
-          "name": "resume_user_label_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "label",
+              "expression": "deleted_batch",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -609,9 +477,9 @@
         }
       },
       "foreignKeys": {
-        "resume_user_id_user_id_fk": {
-          "name": "resume_user_id_user_id_fk",
-          "tableFrom": "resume",
+        "recruiter_contact_user_id_user_id_fk": {
+          "name": "recruiter_contact_user_id_user_id_fk",
+          "tableFrom": "recruiter_contact",
           "tableTo": "user",
           "columnsFrom": [
             "user_id"
@@ -653,12 +521,6 @@
         },
         "template_id": {
           "name": "template_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "attached_resume_id": {
-          "name": "attached_resume_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -762,19 +624,6 @@
           "tableTo": "email_template",
           "columnsFrom": [
             "template_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "send_batch_attached_resume_id_resume_id_fk": {
-          "name": "send_batch_attached_resume_id_resume_id_fk",
-          "tableFrom": "send_batch",
-          "tableTo": "resume",
-          "columnsFrom": [
-            "attached_resume_id"
           ],
           "columnsTo": [
             "id"
@@ -972,6 +821,117 @@
             "id"
           ],
           "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.sender_profile": {
+      "name": "sender_profile",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pitch": {
+          "name": "pitch",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "skills": {
+          "name": "skills",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "link": {
+          "name": "link",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "location": {
+          "name": "location",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "work_preference": {
+          "name": "work_preference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "sender_profile_user_idx": {
+          "name": "sender_profile_user_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "sender_profile_user_id_user_id_fk": {
+          "name": "sender_profile_user_id_user_id_fk",
+          "tableFrom": "sender_profile",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },

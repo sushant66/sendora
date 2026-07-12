@@ -32,3 +32,15 @@ export async function requireUser(): Promise<CurrentUser> {
   if (!user) throw new UnauthorizedError();
   return user;
 }
+
+/**
+ * The authoritative in-app display name (FR-001): the sender profile's display name when set,
+ * otherwise the Google account name. Pure so it is testable and reusable across surfaces
+ * (dashboard greeting, and anywhere the job seeker's own name is shown).
+ */
+export function resolveDisplayName(
+  profileDisplayName: string | null | undefined,
+  accountName: string | null,
+): string | null {
+  return profileDisplayName?.trim() || accountName || null;
+}

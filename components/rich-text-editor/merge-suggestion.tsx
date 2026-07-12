@@ -1,0 +1,249 @@
+"use client";
+
+import { forwardRef, useImperativeHandle, useState, useEffect, useRef, Fragment } from "react";
+import { Extension } from "@tiptap/core";
+import Suggestion from "@tiptap/suggestion";
+import { ReactRenderer } from "@tiptap/react";
+import { MERGE_FIELDS, MERGE_GROUP_LABEL, type MergeFieldDescriptor } from "@/lib/templates/fields";
+
+/**
+ * Inline "/" slash menu for inserting merge fields (feature 002, US2, FR-010). Built on
+ * `@tiptap/suggestion`; renders an accessible listbox grouped into Recipient / Your details,
+ * filterable by typing, navigable by keyboard, dismissed with Escape (Constitution III). On
+ * confirm it inserts an atomic {@link MergeFieldNode} chip.
+ */
+
+/** Filter the closed vocabulary by label, token, or group name (case-insensitive). */
+export function filterMergeFields(query: string): MergeFieldDescriptor[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return MERGE_FIELDS;
+  return MERGE_FIELDS.filter(
+    (f) =>
+      f.label.toLowerCase().includes(q) ||
+      f.token.toLowerCase().includes(q) ||
+      MERGE_GROUP_LABEL[f.group].toLowerCase().includes(q),
+  );
+}
+
+export type SlashMenuAction = { action: "move" | "select" | "close" | "ignore"; index: number };
+
+/** Pure keyboard reducer for the menu, shared by the plugin and tests. */
+export function slashMenuKeydown(key: string, index: number, count: number): SlashMenuAction {
+  if (key === "Escape") return { action: "close", index };
+  if (count === 0) return { action: "ignore", index };
+  switch (key) {
+    case "ArrowDown":
+      return { action: "move", index: (index + 1) % count };
+    case "ArrowUp":
+      return { action: "move", index: (index - 1 + count) % count };
+    case "Enter":
+    case "Tab":
+      return { action: "select", index };
+    default:
+      return { action: "ignore", index };
+  }
+}
+
+/** Controlled, accessible listbox of merge fields grouped by namespace. */
+export function SlashMenuList({
+  items,
+  activeIndex,
+  onSelect,
+}: {
+  items: MergeFieldDescriptor[];
+  activeIndex: number;
+  onSelect: (token: string) => void;
+}) {
+  // Keyboard focus stays in the editor, so the listbox never auto-scrolls to its
+  // aria-activedescendant. Keep the highlighted option in view ourselves on every move.
+  const activeRef = useRef<HTMLLIElement | null>(null);
+  useEffect(() => {
+    const el = activeRef.current;
+    if (!el) return;
+    // If the highlighted option is the first under its group header, scroll the header
+    // into view too, so the group label ("Recipient" / "Your details") stays legible.
+    const prev = el.previousElementSibling;
+    const target = prev?.classList.contains("sendora-slash-group") ? prev : el;
+    target.scrollIntoView({ block: "nearest" });
+  }, [activeIndex]);
+
+  return (
+    <ul
+      role="listbox"
+      aria-label="Merge fields"
+      className="sendora-slash-menu"
+      aria-activedescendant={items.length ? `merge-opt-${activeIndex}` : undefined}
+    >
+      {items.map((f, i) => (
+        <Fragment key={f.token}>
+          {(i === 0 || items[i - 1]!.group !== f.group) && (
+            <li role="presentation" className="sendora-slash-group">
+              {MERGE_GROUP_LABEL[f.group]}
+            </li>
+          )}
+          <li
+            id={`merge-opt-${i}`}
+            ref={i === activeIndex ? activeRef : null}
+            role="option"
+            aria-selected={i === activeIndex}
+            className={`sendora-slash-option${i === activeIndex ? " is-active" : ""}`}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => onSelect(f.token)}
+          >
+            {f.label}
+          </li>
+        </Fragment>
+      ))}
+    </ul>
+  );
+}
+
+type PopupProps = { items: MergeFieldDescriptor[]; command: (item: MergeFieldDescriptor) => void };
+type PopupHandle = { onKeyDown: (props: { event: KeyboardEvent }) => boolean; onClose: () => boolean };
+
+/** Stateful wrapper mounted by the suggestion plugin: owns the active index and keyboard. */
+const SlashMenuPopup = forwardRef<PopupHandle, PopupProps & { onClose: () => void }>(
+  function SlashMenuPopup({ items, command, onClose }, ref) {
+    const [activeIndex, setActiveIndex] = useState(0);
+    // When the filtered list changes (the user typed), reset the highlight to the first item.
+    // Adjusting state during render on a prop change is the sanctioned React pattern (no effect).
+    const [prevItems, setPrevItems] = useState(items);
+    if (prevItems !== items) {
+      setPrevItems(items);
+      setActiveIndex(0);
+    }
+
+    useImperativeHandle(ref, () => ({
+      onClose: () => {
+        onClose();
+        return true;
+      },
+      onKeyDown: ({ event }) => {
+        const r = slashMenuKeydown(event.key, activeIndex, items.length);
+        if (r.action === "move") {
+          setActiveIndex(r.index);
+          return true;
+        }
+        if (r.action === "select") {
+          const f = items[r.index];
+          if (f) command(f);
+          return true;
+        }
+        if (r.action === "close") {
+          onClose();
+          return true;
+        }
+        return false;
+      },
+    }));
+
+    if (!items.length) return null;
+    return (
+      <SlashMenuList
+        items={items}
+        activeIndex={activeIndex}
+        onSelect={(token) => {
+          const f = items.find((x) => x.token === token);
+          if (f) command(f);
+        }}
+      />
+    );
+  },
+);
+
+/** The Tiptap extension wiring the "/" suggestion to the merge-field node. */
+export const MergeSuggestion = Extension.create({
+  name: "mergeSuggestion",
+
+  addProseMirrorPlugins() {
+    return [
+      Suggestion<MergeFieldDescriptor>({
+        editor: this.editor,
+        char: "/",
+        allowSpaces: false,
+        startOfLine: false,
+        items: ({ query }) => filterMergeFields(query),
+        command: ({ editor, range, props }) => {
+          editor
+            .chain()
+            .focus()
+            .deleteRange(range)
+            .insertContent([
+              { type: "mergeField", attrs: { token: props.token } },
+              { type: "text", text: " " },
+            ])
+            .run();
+        },
+        render: () => {
+          let renderer: ReactRenderer<PopupHandle, PopupProps & { onClose: () => void }> | null = null;
+          let popup: HTMLElement | null = null;
+          let open = true;
+
+          function place(clientRect?: (() => DOMRect | null) | null) {
+            if (!popup || !clientRect) return;
+            const rect = clientRect();
+            if (!rect) return;
+            // Fixed positioning at the caret (viewport coords), so it is correct whether the
+            // popup lives in a top-layer <dialog> or on the page.
+            popup.style.left = `${rect.left}px`;
+            popup.style.top = `${rect.bottom + 4}px`;
+          }
+
+          function cleanup() {
+            popup?.remove();
+            popup = null;
+            renderer?.destroy();
+            renderer = null;
+          }
+
+          return {
+            onStart: (p: any) => {
+              open = true;
+              renderer = new ReactRenderer(SlashMenuPopup, {
+                editor: p.editor,
+                props: {
+                  items: p.items,
+                  command: (item: MergeFieldDescriptor) => p.command({ token: item.token }),
+                  onClose: () => {
+                    open = false;
+                    cleanup();
+                  },
+                },
+              });
+              popup = document.createElement("div");
+              popup.className = "sendora-slash-popup";
+              // The popup is portaled out of the React tree (to <body> or a top-layer <dialog>),
+              // both potentially OUTSIDE the [data-astryx-theme] subtree where every theme token
+              // (colors, sizes, --font-family-body) is declared. Mark the popup as its own theme
+              // scope root so those tokens resolve here regardless of where it lands.
+              popup.setAttribute("data-astryx-theme", "neutral");
+              popup.appendChild(renderer.element);
+              // A native <dialog> (Astryx Dialog) renders in the top layer, above anything on
+              // document.body regardless of z-index. Mount the popup INSIDE that dialog when the
+              // editor is in one, so the menu is visible and clickable (else fall back to body).
+              const editorDom = p.editor?.view?.dom as HTMLElement | undefined;
+              const host = editorDom?.closest("dialog") ?? document.body;
+              host.appendChild(popup);
+              place(p.clientRect);
+            },
+            onUpdate: (p: any) => {
+              renderer?.updateProps({
+                items: p.items,
+                command: (item: MergeFieldDescriptor) => p.command({ token: item.token }),
+              });
+              place(p.clientRect);
+            },
+            onKeyDown: (p: any) => {
+              if (!open) return false;
+              return renderer?.ref?.onKeyDown({ event: p.event }) ?? false;
+            },
+            onExit: () => {
+              open = false;
+              cleanup();
+            },
+          };
+        },
+      }),
+    ];
+  },
+});

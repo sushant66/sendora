@@ -22,6 +22,7 @@ import {
   HistoryIcon,
   HomeIcon,
   MailIcon,
+  ProfileIcon,
   ResumesIcon,
   TemplatesIcon,
 } from "./app-icons";
@@ -84,6 +85,13 @@ export function AppSidebar({ user }: { user: CurrentUser }) {
         ))}
       </SideNavSection>
       <SideNavSection title="Account">
+        <SideNavItem
+          as={Link}
+          href="/profile"
+          label="Your profile"
+          icon={ProfileIcon}
+          isSelected={isActive("/profile")}
+        />
         <SideNavItem
           as={Link}
           href="/settings/email-account"
