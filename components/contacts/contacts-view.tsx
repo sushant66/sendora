@@ -275,15 +275,6 @@ export function ContactsView() {
           )
         ) : (
           <VStack gap={3}>
-            {selectionActive && (
-              <SelectionBar
-                count={selectAllMatching ? null : selectedIds.size}
-                canSelectAllMatching={canSelectAllMatching}
-                onSelectAllMatching={() => setSelectAllMatching(true)}
-                onClear={clearSelection}
-                onDelete={() => setPendingDelete({ mode: "selection" })}
-              />
-            )}
             <Table
               data={contacts}
               columns={columns}
@@ -303,6 +294,18 @@ export function ContactsView() {
         )}
       </VStack>
 
+      {/* Bulk-action bar floats over the list (sticky, bottom-centered) so selecting never
+          shifts the table, and it stays reachable while scrolling a long list. */}
+      {selectionActive && (
+        <SelectionBar
+          count={selectAllMatching ? null : selectedIds.size}
+          canSelectAllMatching={canSelectAllMatching}
+          onSelectAllMatching={() => setSelectAllMatching(true)}
+          onClear={clearSelection}
+          onDelete={() => setPendingDelete({ mode: "selection" })}
+        />
+      )}
+
       <ContactFormDialog isOpen={formOpen} onOpenChange={setFormOpen} contact={editing} onSaved={onSaved} />
       <AlertDialog
         isOpen={pendingDelete !== null}
@@ -317,7 +320,11 @@ export function ContactsView() {
   );
 }
 
-/** The bulk-selection bar: count, the two-step "select all matching", clear, and delete. */
+/**
+ * Bulk-selection action bar: a floating pill pinned to the bottom of the content column
+ * (sticky, centered), so selecting never pushes the table and it stays reachable while
+ * scrolling. Holds the count, the two-step "select all matching", clear, and delete.
+ */
 function SelectionBar({
   count,
   canSelectAllMatching,
@@ -332,30 +339,51 @@ function SelectionBar({
   onDelete: () => void;
 }) {
   return (
-    <HStack
-      justify="between"
-      align="center"
-      gap={3}
-      style={{
-        padding: "var(--spacing-2) var(--spacing-3)",
-        background: "var(--color-background-muted)",
-        border: "var(--border-width) solid var(--color-border)",
-        borderRadius: "var(--radius-element)",
-      }}
+    <VStack
+      className="sendora-selection-bar"
+      style={{ position: "sticky", bottom: "var(--spacing-6)", alignSelf: "center", zIndex: 30 }}
     >
-      <HStack gap={3} align="center">
-        <Text size="sm" weight="medium">
-          {count === null ? "All matching contacts selected" : `${count} selected`}
-        </Text>
-        {canSelectAllMatching && (
-          <Button label="Select all matching" variant="ghost" size="sm" onClick={onSelectAllMatching} />
-        )}
+      <SelectionBarStyles />
+      <HStack
+        gap={5}
+        align="center"
+        style={{
+          padding: "var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4)",
+          background: "var(--color-background-surface)",
+          border: "var(--border-width) solid var(--color-border-emphasized)",
+          borderRadius: "var(--radius-full)",
+          boxShadow: "var(--shadow-overlay, 0 12px 32px rgb(0 0 0 / 0.32))",
+        }}
+      >
+        <HStack gap={3} align="center">
+          <Text size="sm" weight="medium">
+            {count === null ? "All matching contacts selected" : `${count} selected`}
+          </Text>
+          {canSelectAllMatching && (
+            <Button label="Select all matching" variant="ghost" size="sm" onClick={onSelectAllMatching} />
+          )}
+        </HStack>
+        <HStack gap={2} align="center">
+          <Button label="Clear" variant="ghost" size="sm" onClick={onClear} />
+          <Button label="Delete" variant="destructive" size="sm" onClick={onDelete} />
+        </HStack>
       </HStack>
-      <HStack gap={2} align="center">
-        <Button label="Clear" variant="ghost" size="sm" onClick={onClear} />
-        <Button label="Delete" variant="destructive" size="sm" onClick={onDelete} />
-      </HStack>
-    </HStack>
+    </VStack>
+  );
+}
+
+function SelectionBarStyles() {
+  return (
+    <style>{`
+      @keyframes sendora-selbar-in {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .sendora-selection-bar { animation: sendora-selbar-in 180ms cubic-bezier(0.22, 1, 0.36, 1); }
+      @media (prefers-reduced-motion: reduce) {
+        .sendora-selection-bar { animation: none; }
+      }
+    `}</style>
   );
 }
 
