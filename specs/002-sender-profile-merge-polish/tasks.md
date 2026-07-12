@@ -96,18 +96,18 @@ dismisses; typing `/` as ordinary text is not trapped.
 
 ### Tests (write first, must fail)
 
-- [ ] T021 [P] [US2] Unit test: merge chip serializes to `{{token}}` and deletes as one unit in `tests/unit/merge-chip.test.ts`
-- [ ] T022 [P] [US2] Component test: slash menu opens on `/`, filters, arrow/Enter/Escape, grouped recipient/sender in `tests/unit/slash-menu.test.tsx`
-- [ ] T023 [P] [US2] E2E: insert via slash menu in template editor + compose, subject insert, in `tests/e2e/merge-picker.spec.ts`
+- [X] T021 [P] [US2] Unit test: merge chip serializes to `{{token}}` and deletes as one unit in `tests/unit/merge-chip.test.ts`
+- [X] T022 [P] [US2] Component test: slash menu opens on `/`, filters, arrow/Enter/Escape, grouped recipient/sender in `tests/unit/slash-menu.test.tsx`
+- [X] T023 [P] [US2] E2E: insert via slash menu in template editor + compose, subject insert, in `tests/e2e/merge-picker.spec.ts`
 
 ### Implementation
 
-- [ ] T024 [US2] Custom atomic merge-field Node (chip) with a token attribute and `{{token}}` serialization in `components/rich-text-editor/merge-field-node.ts`
-- [ ] T025 [US2] Slash-menu Suggestion extension (grouped, searchable, keyboard-navigable, Escape) in `components/rich-text-editor/merge-suggestion.tsx` (depends T024, T007)
-- [ ] T026 [US2] Parse stored `{{token}}` into chips when loading existing content in the editor (depends T024)
-- [ ] T027 [US2] Integrate the Node + Suggestion into `RichTextEditor` and style the chip + menu **through `/impeccable`** (tokens only, WCAG AA, accessible name = field label) in `components/rich-text-editor/rich-text-editor.tsx` (depends T024, T025)
-- [ ] T028 [P] [US2] Subject-line "Insert field" affordance inserting a raw token at the caret, built **through `/impeccable`**, in `components/compose/compose-view.tsx` and `components/templates/template-editor-dialog.tsx` (depends T007)
-- [ ] T029 [US2] Remove the static `MERGE_HINT` text and wire the picker in the template editor dialog and compose (depends T027)
+- [X] T024 [US2] Custom atomic merge-field Node (chip) with a token attribute and `{{token}}` serialization in `components/rich-text-editor/merge-field-node.ts`
+- [X] T025 [US2] Slash-menu Suggestion extension (grouped, searchable, keyboard-navigable, Escape) in `components/rich-text-editor/merge-suggestion.tsx` (depends T024, T007)
+- [X] T026 [US2] Parse stored `{{token}}` into chips when loading existing content in the editor (depends T024)
+- [X] T027 [US2] Integrate the Node + Suggestion into `RichTextEditor` and style the chip + menu **through `/impeccable`** (tokens only, WCAG AA, accessible name = field label) in `components/rich-text-editor/rich-text-editor.tsx` (depends T024, T025)
+- [X] T028 [P] [US2] Subject-line "Insert field" affordance inserting a raw token at the caret, built **through `/impeccable`**, in `components/compose/compose-view.tsx` and `components/templates/template-editor-dialog.tsx` (depends T007)
+- [X] T029 [US2] Remove the static `MERGE_HINT` text and wire the picker in the template editor dialog and compose (depends T027)
 
 **Checkpoint**: US1 and US2 both work independently.
 

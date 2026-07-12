@@ -11,6 +11,8 @@ import { Text } from "@astryxdesign/core/Text";
 import { HStack } from "@astryxdesign/core/HStack";
 import { VStack } from "@astryxdesign/core/VStack";
 import { BoldGlyph, ItalicGlyph, BulletListGlyph, OrderedListGlyph, LinkGlyph } from "./glyphs";
+import { MergeFieldNode, hydrateMergeTokens } from "./merge-field-node";
+import { MergeSuggestion } from "./merge-suggestion";
 
 /**
  * Constrained rich-text editor (User Story 3, FR-009a) shared by compose and the template
@@ -47,8 +49,11 @@ export function RichTextEditor({
         underline: false,
         link: { openOnClick: false, autolink: true, HTMLAttributes: { rel: "noopener noreferrer" } },
       }),
+      MergeFieldNode,
+      MergeSuggestion,
     ],
-    content: value,
+    // Stored `{{token}}` text hydrates into atomic chips on load (US2, T026).
+    content: hydrateMergeTokens(value),
     editorProps: {
       attributes: {
         role: "textbox",
@@ -89,7 +94,10 @@ export function RichTextEditor({
   return (
     <VStack gap={2} align="stretch">
       <EditorStyles />
-      <Text as="label" size="sm" weight="medium">{label}</Text>
+      <HStack gap={2} align="center" justify="between">
+        <Text as="label" size="sm" weight="medium">{label}</Text>
+        <Text size="xsm" color="secondary">Type / to insert a merge field</Text>
+      </HStack>
       <VStack gap={0} align="stretch" className="sendora-rte">
         <VStack align="stretch" className="sendora-rte-toolbar">
           <Toolbar
@@ -149,6 +157,58 @@ function EditorStyles() {
       .sendora-rte-content ul, .sendora-rte-content ol { margin: 0 0 var(--spacing-2); padding-inline-start: var(--spacing-6); }
       .sendora-rte-content a { color: var(--color-text-accent); text-decoration: underline; }
       .sendora-rte-content:focus { outline: none; }
+      /* Merge-field chip: an inline, non-editable token that reads as one unit. */
+      .sendora-merge-chip {
+        display: inline-block;
+        padding: 0 var(--spacing-1half, 6px);
+        margin: 0 1px;
+        border-radius: var(--radius-element);
+        background: var(--color-accent-muted);
+        color: var(--color-text-accent);
+        font-size: 0.9em;
+        font-weight: var(--font-weight-medium);
+        line-height: 1.5;
+        white-space: nowrap;
+        cursor: default;
+        user-select: all;
+      }
+      .sendora-merge-chip.ProseMirror-selectednode {
+        outline: var(--border-width) solid var(--color-text-accent);
+        outline-offset: 1px;
+      }
+      /* Slash menu popup (portaled to <body>, positioned at the caret). */
+      .sendora-slash-popup { position: absolute; z-index: 60; }
+      .sendora-slash-menu {
+        list-style: none;
+        margin: 0;
+        padding: var(--spacing-1);
+        min-width: 220px;
+        max-height: 280px;
+        overflow-y: auto;
+        background: var(--color-background-surface);
+        border: var(--border-width) solid var(--color-border-emphasized);
+        border-radius: var(--radius-element);
+        box-shadow: var(--shadow-overlay, 0 8px 24px rgba(0,0,0,0.18));
+      }
+      .sendora-slash-group {
+        padding: var(--spacing-1) var(--spacing-2);
+        font-size: var(--font-size-xsm);
+        font-weight: var(--font-weight-medium);
+        color: var(--color-text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .sendora-slash-option {
+        padding: var(--spacing-1half, 6px) var(--spacing-2);
+        border-radius: var(--radius-element);
+        color: var(--color-text-primary);
+        cursor: pointer;
+        font-size: var(--font-size-sm);
+      }
+      .sendora-slash-option.is-active,
+      .sendora-slash-option:hover {
+        background: var(--color-background-muted);
+      }
     `}</style>
   );
 }

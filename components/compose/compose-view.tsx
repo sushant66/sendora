@@ -25,6 +25,7 @@ import type { SendResultItem, SendSummary } from "@/lib/send/types";
 import { MAX_SEND_RECIPIENTS } from "@/lib/validation/send";
 import type { RecontactInfo } from "@/lib/history/types";
 import { RichTextEditor } from "@/components/rich-text-editor/rich-text-editor";
+import { InsertFieldMenu } from "@/components/rich-text-editor/insert-field-menu";
 import { takePreselect } from "@/lib/compose/preselect";
 import { EmailPreview } from "./email-preview";
 
@@ -38,6 +39,7 @@ export function ComposeView() {
   const [isLoading, setIsLoading] = useState(true);
 
   const [contactIds, setContactIds] = useState<string[]>([]);
+  const subjectRef = useRef<HTMLElement | null>(null);
   const [previewFor, setPreviewFor] = useState<string>("");
   const [templateId, setTemplateId] = useState("");
   const [subject, setSubject] = useState("");
@@ -276,7 +278,15 @@ export function ComposeView() {
             value={templateId}
             onChange={onTemplate}
           />
-          <TextInput label="Subject" value={subject} onChange={setSubject} placeholder="Subject line" />
+          <VStack gap={1} align="stretch">
+            <HStack justify="between" align="center">
+              <Text size="sm" weight="medium">Subject</Text>
+              <InsertFieldMenu value={subject} onChange={setSubject} containerRef={subjectRef} />
+            </HStack>
+            <span ref={subjectRef} style={{ display: "contents" }}>
+              <TextInput label="Subject" isLabelHidden value={subject} onChange={setSubject} placeholder="Subject line" />
+            </span>
+          </VStack>
           <RichTextEditor key={templateId || "blank"} label="Body" value={bodyHtml} onChange={setBodyHtml} />
           <HStack justify="between" align="center" gap={3}>
             <Text color={overRecipientLimit ? "primary" : "secondary"} size="sm">

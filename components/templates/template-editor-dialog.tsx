@@ -1,17 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Dialog, DialogHeader } from "@astryxdesign/core/Dialog";
 import { Button } from "@astryxdesign/core/Button";
 import { TextInput } from "@astryxdesign/core/TextInput";
+import { Text } from "@astryxdesign/core/Text";
 import { VStack } from "@astryxdesign/core/VStack";
 import { HStack } from "@astryxdesign/core/HStack";
 import { Banner } from "@astryxdesign/core/Banner";
 import { ApiError, apiRequest } from "@/lib/api/client";
 import type { Template } from "@/lib/templates/types";
 import { RichTextEditor } from "@/components/rich-text-editor/rich-text-editor";
-
-const MERGE_HINT = "Merge fields: {{first_name}}, {{last_name}}, {{full_name}}, {{company}}, {{role}}";
+import { InsertFieldMenu } from "@/components/rich-text-editor/insert-field-menu";
 
 export function TemplateEditorDialog({
   isOpen,
@@ -27,7 +27,10 @@ export function TemplateEditorDialog({
   const isEdit = Boolean(template?.id);
   return (
     <Dialog isOpen={isOpen} onOpenChange={onOpenChange} purpose="form" width={640} maxHeight="85vh">
-      <DialogHeader title={isEdit ? "Edit template" : "New template"} subtitle={MERGE_HINT} />
+      <DialogHeader
+        title={isEdit ? "Edit template" : "New template"}
+        subtitle="Use the Insert field menu or type / in the body to add merge fields."
+      />
       <TemplateForm
         key={`${isOpen ? "open" : "closed"}:${template?.id ?? "new"}`}
         template={template}
@@ -50,6 +53,7 @@ function TemplateForm({
   onCancel: () => void;
   onSaved: (template: Template, mode: "created" | "updated") => void;
 }) {
+  const subjectRef = useRef<HTMLElement | null>(null);
   const [name, setName] = useState(template?.name ?? "");
   const [subject, setSubject] = useState(template?.subject ?? "");
   const [bodyHtml, setBodyHtml] = useState(template?.bodyHtml ?? "");
@@ -73,7 +77,7 @@ function TemplateForm({
     } catch (err) {
       if (err instanceof ApiError && err.body.error === "unsupported_merge_fields") {
         const fields = Array.isArray(err.body.fields) ? (err.body.fields as string[]).join(", ") : "";
-        setFormError(`Unsupported merge fields: ${fields}. Use only the supported fields listed above.`);
+        setFormError(`Unsupported merge fields: ${fields}. Use only the fields from the Insert field menu.`);
       } else if (err instanceof ApiError && err.status === 422 && err.body.fields) {
         const f = err.body.fields as Record<string, string>;
         setNameError(f.name);
@@ -103,14 +107,24 @@ function TemplateForm({
           hasAutoFocus
           status={nameError ? { type: "error", message: nameError } : undefined}
         />
-        <TextInput
-          label="Subject"
-          value={subject}
-          onChange={setSubject}
-          isRequired
-          description="You can use merge fields here too."
-          status={subjectError ? { type: "error", message: subjectError } : undefined}
-        />
+        <VStack gap={1} align="stretch">
+          <HStack justify="between" align="center">
+            <Text size="sm" weight="medium">Subject</Text>
+            <InsertFieldMenu value={subject} onChange={setSubject} containerRef={subjectRef} />
+          </HStack>
+          {/* display:contents wrapper hosts a DOM ref so InsertFieldMenu can read the caret,
+              without introducing any layout box. */}
+          <span ref={subjectRef} style={{ display: "contents" }}>
+            <TextInput
+              label="Subject"
+              isLabelHidden
+              value={subject}
+              onChange={setSubject}
+              isRequired
+              status={subjectError ? { type: "error", message: subjectError } : undefined}
+            />
+          </span>
+        </VStack>
         <RichTextEditor label="Body" value={bodyHtml} onChange={setBodyHtml} />
         {formError && <Banner status="error" container="card" title="Couldn't save template" description={formError} />}
         <HStack justify="end" gap={2}>
