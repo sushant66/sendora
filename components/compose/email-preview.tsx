@@ -38,9 +38,15 @@ export function EmailPreview({
   canCopy?: boolean;
 }) {
   const bodyRef = useRef<HTMLDivElement>(null);
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (resetTimer.current) clearTimeout(resetTimer.current); }, []);
+
+  function flashCopyState(state: "copied" | "failed") {
+    setCopyState(state);
+    if (resetTimer.current) clearTimeout(resetTimer.current);
+    resetTimer.current = setTimeout(() => setCopyState("idle"), state === "copied" ? 1600 : 2600);
+  }
 
   async function copyText() {
     // Read the rendered body so the copied text keeps its line breaks (innerText, not the raw
@@ -50,14 +56,19 @@ export function EmailPreview({
     const text = subject ? `${subject}\n\n${body}` : body;
     if (!text) return;
     try {
+      // Clipboard access needs a secure context (https/localhost) and can be denied; without
+      // the API there is nothing to fall back to, so surface the failure on the button.
+      if (!navigator.clipboard) throw new Error("clipboard unavailable");
       await navigator.clipboard.writeText(text);
-      setCopied(true);
-      if (resetTimer.current) clearTimeout(resetTimer.current);
-      resetTimer.current = setTimeout(() => setCopied(false), 1600);
+      flashCopyState("copied");
     } catch {
-      /* clipboard blocked (permissions / insecure context): leave the button unchanged */
+      // Blocked (insecure context / permission): tell the user instead of a silent no-op.
+      flashCopyState("failed");
     }
   }
+
+  const copied = copyState === "copied";
+  const failed = copyState === "failed";
 
   const showCopy = canCopy && !isEmpty && !!preview;
 
@@ -69,12 +80,16 @@ export function EmailPreview({
           <Text size="sm" color="secondary" weight="medium">Preview</Text>
           {showCopy && (
             <Button
-              label={copied ? "Copied" : "Copy text"}
+              label={copied ? "Copied" : failed ? "Couldn't copy" : "Copy text"}
               icon={<Icon icon={copied ? "checkDouble" : "copy"} size="sm" />}
               variant="secondary"
               size="sm"
               onClick={copyText}
-              tooltip="Copy this email's text to your clipboard"
+              tooltip={
+                failed
+                  ? "Copying needs a secure (https) page and clipboard permission. Select the text to copy it manually."
+                  : "Copy this email's text to your clipboard"
+              }
             />
           )}
         </HStack>
