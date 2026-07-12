@@ -17,8 +17,9 @@ const STARTERS: StarterInput[] = [
     bodyHtml:
       "<p>Hi {{first_name}},</p>" +
       "<p>I came across your work at {{company}} and wanted to reach out directly. I'm exploring new opportunities and would love to be considered for relevant roles you're hiring for.</p>" +
-      "<p>I've attached a short summary of my background. Happy to share more. Would you be open to a quick chat?</p>" +
-      "<p>Thanks for your time,</p>",
+      "<p>You can see a short summary of my background here: {{my_link}}. Happy to share more. Would you be open to a quick chat?</p>" +
+      "<p>Thanks for your time,</p>" +
+      "<p>{{my_name}}<br />{{my_title}}<br />{{my_link}}</p>",
   },
   {
     slug: "role-specific",

@@ -16,6 +16,7 @@ import { EmptyState } from "@astryxdesign/core/EmptyState";
 import { Skeleton } from "@astryxdesign/core/Skeleton";
 import { Table, proportional, type TableColumn } from "@astryxdesign/core/Table";
 import { StatusDot } from "@astryxdesign/core/StatusDot";
+import { Dialog, DialogHeader } from "@astryxdesign/core/Dialog";
 import { useToast } from "@astryxdesign/core/Toast";
 import { ApiError, apiRequest } from "@/lib/api/client";
 import type { Contact, ContactList } from "@/lib/contacts/types";
@@ -24,10 +25,15 @@ import type { AccountStatus } from "@/lib/email/types";
 import type { SendResultItem, SendSummary } from "@/lib/send/types";
 import { MAX_SEND_RECIPIENTS } from "@/lib/validation/send";
 import type { RecontactInfo } from "@/lib/history/types";
+import type { SenderProfile } from "@/lib/profile/types";
+import { computeMissingValues, type MissingValueReport } from "@/lib/compose/missing-values";
+import { MERGE_FIELD_BY_TOKEN } from "@/lib/templates/fields";
 import { RichTextEditor } from "@/components/rich-text-editor/rich-text-editor";
 import { InsertFieldMenu } from "@/components/rich-text-editor/insert-field-menu";
 import { takePreselect } from "@/lib/compose/preselect";
 import { EmailPreview } from "./email-preview";
+
+type TestSendResult = { status: "sent" | "failed"; toEmail?: string; reason?: string };
 
 const PREVIEW_DEBOUNCE_MS = 350;
 
@@ -49,18 +55,24 @@ export function ComposeView() {
   const [recontact, setRecontact] = useState<RecontactInfo | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [result, setResult] = useState<SendSummary | null>(null);
+  const [profile, setProfile] = useState<SenderProfile | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
+  // Pre-send missing-value gate (FR-016): populated when a send would leave a used field blank.
+  const [gate, setGate] = useState<{ report: MissingValueReport; preview: TemplatePreview | null } | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const [c, t, a] = await Promise.all([
+        const [c, t, a, p] = await Promise.all([
           apiRequest<ContactList>("/api/contacts?all=1"),
           apiRequest<{ items: Template[] }>("/api/templates"),
           apiRequest<AccountStatus>("/api/email-account"),
+          apiRequest<SenderProfile>("/api/profile"),
         ]);
         setContacts(c.items);
         setTemplates(t.items);
         setAccount(a);
+        setProfile(p);
 
         // Pick up a batch handed off from the import screen and pre-fill the recipients, so the
         // user doesn't re-select the list they just imported. Keep only IDs that still exist,
@@ -160,7 +172,62 @@ export function ComposeView() {
   const canSend = contactIds.length > 0 && hasContent && account?.connected === true && !isSending && !overRecipientLimit;
   const isBulk = contactIds.length > 1;
 
+  const selectedContacts = useMemo(
+    () => contactIds.map((id) => contactsById.get(id)).filter((c): c is Contact => Boolean(c)),
+    [contactIds, contactsById],
+  );
+
+  /** Send-time gate (FR-016): if a used field would resolve empty, show how it reads and
+   *  require an explicit confirm; otherwise send straight through. */
+  async function attemptSend() {
+    const report = computeMissingValues({ subject, bodyHtml, contacts: selectedContacts, profile });
+    if (!report.hasMissing) {
+      void send();
+      return;
+    }
+    let representative: TemplatePreview | null = null;
+    if (report.representativeContactId) {
+      try {
+        representative = await apiRequest<TemplatePreview>("/api/templates/preview", {
+          method: "POST",
+          json: { contactId: report.representativeContactId, inline: { subject, bodyHtml } },
+        });
+      } catch {
+        /* the summary alone still lets the user decide */
+      }
+    }
+    setGate({ report, preview: representative });
+  }
+
+  async function sendTest() {
+    setIsTesting(true);
+    try {
+      const res = await apiRequest<TestSendResult>("/api/send/test", {
+        method: "POST",
+        json: {
+          contactId: previewContactId || undefined,
+          templateId: templateId || undefined,
+          override: { subject, bodyHtml },
+        },
+      });
+      if (res.status === "sent") toast({ body: `Test sent to ${res.toEmail}. Check your inbox.` });
+      else toast({ body: res.reason ?? "The test could not be sent.", type: "error" });
+    } catch (err) {
+      if (err instanceof ApiError && err.body.error === "no_active_account") {
+        setAccount({ connected: false });
+        toast({ body: "Connect your Gmail to send a test.", type: "error" });
+      } else if (err instanceof ApiError && err.status === 422) {
+        toast({ body: "Add a subject and body first.", type: "error" });
+      } else {
+        toast({ body: "Something went wrong sending the test.", type: "error" });
+      }
+    } finally {
+      setIsTesting(false);
+    }
+  }
+
   async function send() {
+    setGate(null);
     setIsSending(true);
     setResult(null);
     try {
@@ -298,21 +365,48 @@ export function ComposeView() {
                     ? `${contactIds.length} recruiters, each gets a separate, personalized email`
                     : "1 recruiter"}
             </Text>
-            <Button
-              label={isBulk ? `Send ${contactIds.length} emails` : "Send email"}
-              variant="primary"
-              onClick={send}
-              isLoading={isSending}
-              isDisabled={!canSend}
-              tooltip={
-                !account?.connected
-                  ? "Connect your Gmail to send"
-                  : overRecipientLimit
-                    ? `Remove ${(contactIds.length - MAX_SEND_RECIPIENTS).toLocaleString()} recipients to send`
-                    : undefined
-              }
-            />
+            <HStack gap={2} align="center">
+              <Button
+                label="Send test to myself"
+                variant="secondary"
+                onClick={sendTest}
+                isLoading={isTesting}
+                isDisabled={!hasContent || account?.connected !== true || isSending}
+                tooltip={
+                  !account?.connected
+                    ? "Connect your Gmail to send a test"
+                    : !hasContent
+                      ? "Add a subject and body first"
+                      : "Send this draft to your own inbox"
+                }
+              />
+              <Button
+                label={isBulk ? `Send ${contactIds.length} emails` : "Send email"}
+                variant="primary"
+                onClick={attemptSend}
+                isLoading={isSending}
+                isDisabled={!canSend}
+                tooltip={
+                  !account?.connected
+                    ? "Connect your Gmail to send"
+                    : overRecipientLimit
+                      ? `Remove ${(contactIds.length - MAX_SEND_RECIPIENTS).toLocaleString()} recipients to send`
+                      : undefined
+                }
+              />
+            </HStack>
           </HStack>
+          {gate && (
+            <MissingValueGate
+              report={gate.report}
+              preview={gate.preview}
+              fromEmail={account?.emailAddress}
+              toEmail={contactsById.get(gate.report.representativeContactId ?? "")?.email}
+              onCancel={() => setGate(null)}
+              onConfirm={() => void send()}
+              isSending={isSending}
+            />
+          )}
         </VStack>
 
         <VStack gap={3} align="stretch">
@@ -333,6 +427,75 @@ export function ComposeView() {
         </VStack>
       </Grid>
     </VStack>
+  );
+}
+
+function labelsFor(tokens: string[]): string {
+  return tokens.map((t) => MERGE_FIELD_BY_TOKEN[t]?.label ?? t).join(", ");
+}
+
+/**
+ * Pre-send missing-value gate (US3, FR-016). Summarizes which used fields would be left blank,
+ * shows how a representative affected email actually reads, and requires an explicit confirm.
+ * Warn-and-confirm, never a hard block.
+ */
+function MissingValueGate({
+  report,
+  preview,
+  fromEmail,
+  toEmail,
+  onCancel,
+  onConfirm,
+  isSending,
+}: {
+  report: MissingValueReport;
+  preview: TemplatePreview | null;
+  fromEmail?: string;
+  toEmail?: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+  isSending: boolean;
+}) {
+  const recipientMissingTokens = [...new Set(report.affected.flatMap((a) => a.missing))];
+  return (
+    <Dialog isOpen onOpenChange={(open) => !open && onCancel()} purpose="required" width={560} maxHeight="85vh">
+      <DialogHeader
+        title="Some fields will be left blank"
+        subtitle="These emails will still send. Here is how one of them reads so you can decide."
+      />
+      <VStack gap={4} align="stretch">
+        <VStack gap={2} align="stretch">
+          {recipientMissingTokens.length > 0 && (
+            <Banner
+              status="warning"
+              container="card"
+              title={`${report.affected.length} recipient${report.affected.length === 1 ? "" : "s"} missing a value`}
+              description={`No value for ${labelsFor(recipientMissingTokens)} on ${report.affected.length === 1 ? "this recipient" : "these recipients"}.`}
+            />
+          )}
+          {report.senderMissing.length > 0 && (
+            <Banner
+              status="warning"
+              container="card"
+              title="Your profile is missing a value"
+              description={`${labelsFor(report.senderMissing)} ${report.senderMissing.length === 1 ? "is" : "are"} empty, so ${report.senderMissing.length === 1 ? "it" : "they"} will be blank in every email. You can add ${report.senderMissing.length === 1 ? "it" : "them"} on your profile.`}
+            />
+          )}
+        </VStack>
+
+        <VStack gap={2} align="stretch">
+          <Text size="sm" weight="medium">
+            How one of these emails reads
+          </Text>
+          <EmailPreview preview={preview} fromEmail={fromEmail} toEmail={toEmail} isEmpty={!preview} />
+        </VStack>
+
+        <HStack justify="end" gap={2}>
+          <Button label="Go back and edit" variant="ghost" onClick={onCancel} isDisabled={isSending} />
+          <Button label="Send anyway" variant="primary" onClick={onConfirm} isLoading={isSending} />
+        </HStack>
+      </VStack>
+    </Dialog>
   );
 }
 

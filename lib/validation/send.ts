@@ -24,3 +24,25 @@ export const SendRequestSchema = z
     path: ["templateId"],
   });
 export type SendRequest = z.infer<typeof SendRequestSchema>;
+
+/**
+ * Test-send request (feature 002, US3, FR-015). Mirrors the real send's override shape but
+ * targets the job seeker's own inbox and persists nothing. `contactId` is an optional preview
+ * target; omit it to render against clearly labelled sample data.
+ */
+export const TestSendRequestSchema = z
+  .object({
+    contactId: z.string().min(1).optional(),
+    templateId: z.string().min(1).optional(),
+    override: z
+      .object({
+        subject: z.string().trim().min(1, "Add a subject and body first."),
+        bodyHtml: z.string().min(1, "Add a subject and body first."),
+      })
+      .optional(),
+  })
+  .refine((d) => Boolean(d.templateId) || Boolean(d.override), {
+    message: "Add a subject and body first.",
+    path: ["bodyHtml"],
+  });
+export type TestSendRequest = z.infer<typeof TestSendRequestSchema>;

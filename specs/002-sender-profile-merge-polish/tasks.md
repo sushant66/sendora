@@ -124,20 +124,20 @@ reading and requires a confirm; confirm the "cold outreach" starter has no attac
 
 ### Tests (write first, must fail)
 
-- [ ] T030 [P] [US3] Contract test for `POST /api/send/test` (no history rows, `no_active_account`, validation) in `tests/contract/send-test.test.ts`
-- [ ] T031 [P] [US3] Unit test: missing-value computation over a selection (recipient + sender) in `tests/unit/missing-value.test.ts`
-- [ ] T032 [P] [US3] Integration test: test send creates no `send_batch`/`send_record`; starter has no attachment wording, in `tests/integration/send-test.test.ts`
-- [ ] T033 [P] [US3] E2E: send test to self; missing-value gate shows reading + requires confirm, in `tests/e2e/compose-confidence.spec.ts`
+- [X] T030 [P] [US3] Contract test for `POST /api/send/test` (no history rows, `no_active_account`, validation) in `tests/contract/send-test.test.ts`
+- [X] T031 [P] [US3] Unit test: missing-value computation over a selection (recipient + sender) in `tests/unit/missing-value.test.ts`
+- [X] T032 [P] [US3] Integration test: test send creates no `send_batch`/`send_record`; starter has no attachment wording, in `tests/integration/send-test.test.ts`
+- [X] T033 [P] [US3] E2E: send test to self; missing-value gate shows reading + requires confirm, in `tests/e2e/compose-confidence.spec.ts`
 
 ### Implementation
 
-- [ ] T034 [US3] Test-send request Zod schema in `lib/validation/send.ts`
-- [ ] T035 [US3] Test-send service (render current draft incl. `my_*`, send via the provider seam, create NO records) in `lib/send/test-send.ts` (depends T006, T017)
-- [ ] T036 [US3] `POST /api/send/test` route in `app/api/send/test/route.ts` (depends T034, T035)
-- [ ] T037 [P] [US3] Missing-value computation util over a selection (used tokens × contacts × profile) in `lib/compose/missing-values.ts` (depends T005)
-- [ ] T038 [US3] "Send test to myself" control in compose, built **through `/impeccable`**, in `components/compose/compose-view.tsx` (depends T036)
-- [ ] T039 [US3] Missing-value pre-send gate UI (summary + how-it-reads sample via the existing preview, using the first affected recipient in the selection as the representative, + explicit confirm), built **through `/impeccable`**, in `components/compose/` (depends T037)
-- [ ] T040 [US3] Rewrite the "Intro: cold outreach" starter to reference a link (not an attachment) and demonstrate a `my_*` sign-off (name / title / link, FR-004) in `lib/templates/starters.ts`, then refresh the shared system rows by re-running the idempotent seed `lib/db/seed.ts`. System starters are shared `user_id=null` rows; no per-user migration and no schema change are needed. (F1, U2)
+- [X] T034 [US3] Test-send request Zod schema in `lib/validation/send.ts`
+- [X] T035 [US3] Test-send service (render current draft incl. `my_*`, send via the provider seam, create NO records) in `lib/send/test-send.ts` (depends T006, T017)
+- [X] T036 [US3] `POST /api/send/test` route in `app/api/send/test/route.ts` (depends T034, T035)
+- [X] T037 [P] [US3] Missing-value computation util over a selection (used tokens × contacts × profile) in `lib/compose/missing-values.ts` (depends T005)
+- [X] T038 [US3] "Send test to myself" control in compose, built **through `/impeccable`**, in `components/compose/compose-view.tsx` (depends T036)
+- [X] T039 [US3] Missing-value pre-send gate UI (summary + how-it-reads sample via the existing preview, using the first affected recipient in the selection as the representative, + explicit confirm), built **through `/impeccable`**, in `components/compose/` (depends T037)
+- [X] T040 [US3] Rewrite the "Intro: cold outreach" starter to reference a link (not an attachment) and demonstrate a `my_*` sign-off (name / title / link, FR-004) in `lib/templates/starters.ts`, then refresh the shared system rows by re-running the idempotent seed `lib/db/seed.ts`. System starters are shared `user_id=null` rows; no per-user migration and no schema change are needed. (F1, U2)
 
 **Checkpoint**: US1, US2, US3 all work independently.
 
