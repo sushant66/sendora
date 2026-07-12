@@ -4,8 +4,10 @@ import { recruiterContacts, sendBatches, sendRecords } from "@/lib/db/schema";
 import { NotFoundError } from "@/lib/errors";
 import { normalizeEmail } from "@/lib/validation/contacts";
 import type { SendRequest } from "@/lib/validation/send";
-import { renderTemplate } from "@/lib/templates/merge";
+import { renderTemplate, type SenderContext } from "@/lib/templates/merge";
 import { resolveContent } from "@/lib/templates/preview";
+import { getProfile } from "@/lib/profile/service";
+import { senderContextFromProfile } from "@/lib/profile/context";
 import { getActiveAccount, markAccountExpired } from "@/lib/email/account-service";
 import { resolveProvider } from "@/lib/email/factory";
 import { REAUTH_REQUIRED, type EmailProvider, type ProviderCredentials } from "@/lib/email/provider";
@@ -68,12 +70,16 @@ export async function runSendLoop(
   provider: EmailProvider,
   credentials: ProviderCredentials,
   onReauthRequired?: () => void | Promise<void>,
+  sender?: SenderContext,
 ): Promise<RenderedSend[]> {
   const out: RenderedSend[] = [];
   let accountDisabled = false;
 
   for (const contact of recipients) {
-    const rendered = renderTemplate(base, { contact: { name: contact.name, company: contact.company, role: contact.role } });
+    const rendered = renderTemplate(base, {
+      contact: { name: contact.name, company: contact.company, role: contact.role },
+      sender,
+    });
     const record: RenderedSend = {
       contactId: contact.id,
       recipientEmail: contact.email,
@@ -136,6 +142,11 @@ export async function sendEmails(
     db,
   );
 
+  // Sender (`my_*`) fields resolve from the profile; the display name falls back to the
+  // account name (FR-001). Loaded once and reused across every recipient in the batch.
+  const profile = await getProfile(userId, db);
+  const sender = senderContextFromProfile(profile, fromName);
+
   const kind = recipients.length > 1 ? "bulk" : "single";
   const [batch] = await db
     .insert(sendBatches)
@@ -150,6 +161,7 @@ export async function sendEmails(
     provider,
     account.credentials,
     () => markAccountExpired(account.row.id, db),
+    sender,
   );
 
   if (rendered.length > 0) {

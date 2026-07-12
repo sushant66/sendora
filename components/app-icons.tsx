@@ -76,3 +76,11 @@ export const MailIcon: Glyph = (props) => (
     <path d="m4.5 7 7.5 5.5L19.5 7" />
   </svg>
 );
+
+/** Sender profile: a single person outline (the job seeker's own details). */
+export const ProfileIcon: Glyph = (props) => (
+  <svg {...base(props)}>
+    <circle cx="12" cy="8" r="3.5" />
+    <path d="M5.5 19.5a6.5 6.5 0 0 1 13 0" />
+  </svg>
+);

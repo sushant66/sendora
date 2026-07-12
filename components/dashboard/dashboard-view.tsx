@@ -22,6 +22,8 @@ type Props = {
   hasContacts: boolean;
   recent: HistoryRecord[];
   hasSent: boolean;
+  /** Whether the sender profile has any content yet (US1/US5 onboarding step). */
+  hasProfile?: boolean;
 };
 
 type Step = {
@@ -30,21 +32,17 @@ type Step = {
   done: boolean;
   href: string;
   cta: string;
+  /** Optional steps never block "all set up"; they guide but aren't required (US5). */
+  optional?: boolean;
 };
 
-export function DashboardView({ user, account, hasContacts, recent, hasSent }: Props) {
-  const connected = account.connected;
+export function DashboardView({ user, account, hasContacts, recent, hasSent, hasProfile = false }: Props) {
   const expired = account.status === "expired";
   const firstName = user.name?.trim().split(/\s+/)[0] ?? null;
 
+  // Order the setup so a job seeker sees the value (contacts + a real rendered template, then
+  // their own details) before the Gmail prompt, which is requested at first send (US5, SC-007).
   const steps: Step[] = [
-    {
-      title: "Connect your Gmail",
-      description: "Send from your own inbox so replies come back to you.",
-      done: connected,
-      href: "/settings/email-account",
-      cta: "Connect Gmail",
-    },
     {
       title: "Add your recruiters",
       description: "Import a CSV, paste a list, or add contacts by hand.",
@@ -53,16 +51,25 @@ export function DashboardView({ user, account, hasContacts, recent, hasSent }: P
       cta: "Import contacts",
     },
     {
+      title: "Personalize a template",
+      description: "Preview a real, rendered email and add your details so they fill your outreach.",
+      done: hasProfile,
+      href: "/profile",
+      cta: "Set up your profile",
+      optional: true,
+    },
+    {
       title: "Send your first email",
-      description: "Pick a template, preview the real message, and send.",
+      description: "Pick a template, preview the real message, and send. You'll connect Gmail here.",
       done: hasSent,
       href: "/compose",
       cta: "Compose email",
     },
   ];
 
-  const allSetUp = steps.every((s) => s.done);
-  const activeIndex = steps.findIndex((s) => !s.done);
+  // Optional steps guide but never gate "all set up" (US5): only required steps must be done.
+  const allSetUp = steps.every((s) => s.done || s.optional);
+  const activeIndex = steps.findIndex((s) => !s.done && !s.optional);
   const next =
     allSetUp || activeIndex < 0
       ? { href: "/compose", cta: "Compose email" }
@@ -107,7 +114,7 @@ export function DashboardView({ user, account, hasContacts, recent, hasSent }: P
             <VStack gap={1}>
               <Heading level={2}>Get set up</Heading>
               <Text type="supporting">
-                {doneCount} of {steps.length} done. Three quick steps to your first sent email.
+                {doneCount} of {steps.length} done. A few steps to your first sent email.
               </Text>
             </VStack>
             <VStack gap={0}>
@@ -250,7 +257,14 @@ function StepRow({
         <HStack gap={3} align="center" style={{ minWidth: 0 }}>
           <StepMarker done={step.done} active={isActive} n={index + 1} />
           <VStack gap={0} style={{ minWidth: 0 }}>
-            <Text weight="medium">{step.title}</Text>
+            <HStack gap={2} align="center">
+              <Text weight="medium">{step.title}</Text>
+              {step.optional && (
+                <Text size="xsm" color="secondary">
+                  Optional
+                </Text>
+              )}
+            </HStack>
             <Text type="supporting">{step.description}</Text>
           </VStack>
         </HStack>
@@ -258,7 +272,7 @@ function StepRow({
           <Text size="sm" color="secondary">
             Done
           </Text>
-        ) : isActive ? (
+        ) : isActive || step.optional ? (
           <LinkButton href={step.href} label={step.cta} variant="secondary" size="sm" />
         ) : null}
       </HStack>

@@ -29,6 +29,13 @@
       "when": 1783757232700,
       "tag": "0003_wonderful_sunfire",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1783842945690,
+      "tag": "0004_thin_tag",
+      "breakpoints": true
     }
   ]
 }

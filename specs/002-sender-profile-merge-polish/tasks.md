@@ -65,21 +65,21 @@ placeholder; confirm sending still works with no profile.
 
 ### Tests (write first, must fail)
 
-- [ ] T009 [P] [US1] Contract test for `GET`/`PUT /api/profile` in `tests/contract/profile.test.ts`
-- [ ] T010 [P] [US1] Integration test: save profile, `my_*` resolves in preview, empty sender warns, send not blocked without a profile, in `tests/integration/profile.test.ts`
-- [ ] T011 [P] [US1] E2E: set up profile, use it in a template, preview, in `tests/e2e/profile.spec.ts`
+- [X] T009 [P] [US1] Contract test for `GET`/`PUT /api/profile` in `tests/contract/profile.test.ts`
+- [X] T010 [P] [US1] Integration test: save profile, `my_*` resolves in preview, empty sender warns, send not blocked without a profile, in `tests/integration/profile.test.ts`
+- [X] T011 [P] [US1] E2E: set up profile, use it in a template, preview, in `tests/e2e/profile.spec.ts`
 
 ### Implementation
 
-- [ ] T012 [US1] Add the `sender_profile` table to `lib/db/schema.ts` and generate + apply the migration (drizzle-kit)
-- [ ] T013 [P] [US1] Zod schema for the profile (optional fields, URL + work-preference enum, length bounds) in `lib/validation/profile.ts`
-- [ ] T014 [P] [US1] Profile types / DTO in `lib/profile/types.ts`
-- [ ] T015 [US1] Profile service (get, lazy upsert) in `lib/profile/service.ts` (depends T012, T013)
-- [ ] T016 [US1] `GET`/`PUT` route handlers in `app/api/profile/route.ts` (depends T015)
-- [ ] T017 [US1] Wire the sender profile into render at the send and preview call sites (`lib/send/*`, `app/api/templates/preview/route.ts`) so `my_*` resolves everywhere (depends T006, T015)
-- [ ] T018 [US1] Make the profile display name authoritative (fallback to the Google account name) in the session helper + dashboard greeting (`lib/auth/session.ts`, `components/dashboard/dashboard-view.tsx`)
-- [ ] T019 [US1] Build the profile page **through `/impeccable`** (Astryx form, tokens only, WCAG AA) in `components/profile/profile-view.tsx` and `app/(app)/profile/page.tsx` (depends T016)
-- [ ] T020 [US1] Add the Profile nav entry in `components/app-sidebar.tsx`
+- [X] T012 [US1] Add the `sender_profile` table to `lib/db/schema.ts` and generate + apply the migration (drizzle-kit)
+- [X] T013 [P] [US1] Zod schema for the profile (optional fields, URL + work-preference enum, length bounds) in `lib/validation/profile.ts`
+- [X] T014 [P] [US1] Profile types / DTO in `lib/profile/types.ts`
+- [X] T015 [US1] Profile service (get, lazy upsert) in `lib/profile/service.ts` (depends T012, T013)
+- [X] T016 [US1] `GET`/`PUT` route handlers in `app/api/profile/route.ts` (depends T015)
+- [X] T017 [US1] Wire the sender profile into render at the send and preview call sites (`lib/send/*`, `app/api/templates/preview/route.ts`) so `my_*` resolves everywhere (depends T006, T015)
+- [X] T018 [US1] Make the profile display name authoritative (fallback to the Google account name) in the session helper + dashboard greeting (`lib/auth/session.ts`, `components/dashboard/dashboard-view.tsx`)
+- [X] T019 [US1] Build the profile page **through `/impeccable`** (Astryx form, tokens only, WCAG AA) in `components/profile/profile-view.tsx` and `app/(app)/profile/page.tsx` (depends T016)
+- [X] T020 [US1] Add the Profile nav entry in `components/app-sidebar.tsx`
 
 **Checkpoint**: US1 fully functional and independently testable. This is the MVP.
 

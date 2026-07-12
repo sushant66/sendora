@@ -102,6 +102,35 @@ export const recruiterContacts = pgTable(
 export type RecruiterContactRow = typeof recruiterContacts.$inferSelect;
 
 /**
+ * SenderProfile (feature 002, User Story 1) — one row per user (1:1 with `user`), created
+ * lazily on first save. Backs the sender (`my_*`) merge fields and the authoritative in-app
+ * display name (FR-001). Every value field is nullable; an empty profile is a full set of
+ * nulls. A user reads/writes only their own row (FR-006/FR-024).
+ */
+export const senderProfiles = pgTable(
+  "sender_profile",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    displayName: text("display_name"),
+    title: text("title"),
+    pitch: text("pitch"),
+    skills: text("skills"),
+    link: text("link"),
+    location: text("location"),
+    workPreference: text("work_preference"), // remote | hybrid | onsite | open
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("sender_profile_user_idx").on(t.userId)],
+);
+export type SenderProfileRow = typeof senderProfiles.$inferSelect;
+
+/**
  * ConnectedEmailAccount (User Story 2) — authorization to send from an external provider
  * (FR-019/a/b/c). Gmail is the only `provider` in v1. Tokens are encrypted at rest and
  * never returned to the client.
