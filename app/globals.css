@@ -28,19 +28,67 @@
 }
 
 /*
- * Toasts render on an INVERTED "media" surface via MediaTheme, which flips `color-scheme` so
- * light-dark() tokens resolve to the opposite side. But this theme ships fixed-hex text tokens
- * (not light-dark()), so the surface inverts (white in dark mode) while the ink stays light —
- * light text on a white toast (~1.3:1, unreadable). The inversion can't be patched cleanly
- * (light-dark() resolves against the wrong element's color-scheme), so pin the info toast to the
- * app's own elevated surface instead: surface and primary ink both track the mode together, so
- * it's always readable — and a non-inverted toast suits the calm brand. The error toast keeps its
+ * Astryx wraps toast content in a MediaTheme that flips `color-scheme` (mediaMode is "light"
+ * whenever the resolved theme mode isn't literally "light", which is always true under our
+ * mode="system" setup). That inverts the default toast to a white surface, but our fixed-hex
+ * ink doesn't follow, so it reads as light-on-white or (in dark mode) dark-on-dark — the
+ * unreadable toast. A non-inverted toast also suits the calm brand, so pin the info toast to the
+ * app's own elevated surface. Crucially, the ink has to track the SAME mode as that surface:
+ * the MediaTheme child forces `color-scheme: light` on the content, so override it back to
+ * `inherit` and the light-dark() ink resolves to the app mode (light surface + dark ink in light
+ * mode, dark surface + light ink in dark mode) — readable both ways. The error toast keeps its
  * semantic red; force pure-white ink so it clears AA on that red.
  */
+/*
+ * Info toast: keep Astryx's inverted-surface look (a light chip in dark mode, a dark chip in
+ * light mode) so notifications stand out from the app surface. Astryx's own default is broken
+ * here: --color-background-inverted stays light in BOTH modes (its color-scheme gets pinned),
+ * so in light mode it renders the MediaTheme's light ink on a light surface — white-on-white,
+ * invisible. The text inverts correctly via MediaTheme; only the background doesn't. So drive
+ * the background from the app's primary ink, which IS the counterpart of that inverted text and
+ * tracks the mode: near-white bg + dark ink (dark mode), dark bg + light ink (light mode). The
+ * pair is always high-contrast. The error toast keeps its semantic red with forced white ink.
+ */
 .astryx-toast.info {
-  background-color: var(--color-background-surface) !important;
+  background-color: var(--color-text-primary) !important;
 }
 .astryx-toast.error {
   --color-text-primary: var(--color-on-dark);
   --color-icon-primary: var(--color-on-dark);
+}
+
+/*
+ * Navigation progress bar (components/ui/nav-progress.tsx). Astryx has no top-of-page
+ * navigation indicator, so this patches that gap with token-based styling. The track sits
+ * above the sticky marketing header (z-index 20) but below Astryx overlays (dialogs/toasts),
+ * so a modal can still cover it. The fill trickles toward 90% on nav start, then completes;
+ * width/opacity animate on the theme's standard ease-out. Motion conveys state only.
+ */
+.nav-progress-track {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  height: 3px;
+  z-index: 100;
+  pointer-events: none;
+}
+.nav-progress-fill {
+  height: 100%;
+  min-width: 2px;
+  background: var(--color-accent);
+  border-start-end-radius: var(--radius-full);
+  border-end-end-radius: var(--radius-full);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--color-accent) 55%, transparent);
+  transition:
+    width var(--duration-medium) cubic-bezier(0.24, 1, 0.4, 1),
+    opacity var(--duration-fast) cubic-bezier(0.24, 1, 0.4, 1);
+}
+/*
+ * Reduced motion: keep the state signal (the bar still appears and disappears) but drop the
+ * sliding-width animation; only the fade in/out remains.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .nav-progress-fill {
+    transition: opacity var(--duration-fast) linear;
+  }
 }

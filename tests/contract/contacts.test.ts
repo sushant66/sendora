@@ -44,7 +44,7 @@ describe("GET /api/contacts", () => {
     const res = await GET(jsonRequest("/api/contacts?query=ada", "GET"));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ items: [], nextCursor: null });
-    expect(service.listContacts).toHaveBeenCalledWith("u1", { query: "ada", cursor: undefined });
+    expect(service.listContacts).toHaveBeenCalledWith("u1", { query: "ada", cursor: undefined, all: false });
   });
 
   it("returns 401 when unauthenticated", async () => {
@@ -110,6 +110,7 @@ describe("POST /api/contacts/import", () => {
       imported: 2,
       duplicates: [{ row: 3, email: "dup@x.com" }],
       invalid: [{ row: 4, reason: "missing/invalid email" }],
+      contactIds: ["c1", "c2"],
     });
     const res = await IMPORT(
       jsonRequest("/api/contacts/import", "POST", {
@@ -122,6 +123,7 @@ describe("POST /api/contacts/import", () => {
       imported: 2,
       duplicates: [{ row: 3, email: "dup@x.com" }],
       invalid: [{ row: 4, reason: "missing/invalid email" }],
+      contactIds: ["c1", "c2"],
     });
   });
 

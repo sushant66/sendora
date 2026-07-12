@@ -17,7 +17,7 @@ import { listHistory, getRecontactInfo, getHistoryDetail, getBatchRecords } from
 import { resendRecord } from "@/lib/send/service";
 import { requireUser } from "@/lib/auth/session";
 import { GET as HISTORY } from "@/app/api/history/route";
-import { GET as RECONTACT } from "@/app/api/history/recontact/route";
+import { POST as RECONTACT } from "@/app/api/history/recontact/route";
 import { GET as DETAIL } from "@/app/api/history/[id]/route";
 import { POST as RESEND } from "@/app/api/history/[id]/resend/route";
 import { GET as BATCH } from "@/app/api/history/batch/[batchId]/route";
@@ -38,6 +38,14 @@ const RECORD: HistoryRecord = {
 
 function req(url: string, method = "GET"): NextRequest {
   return new NextRequest(new URL(url, "http://localhost"), { method });
+}
+
+function jsonReq(url: string, body: unknown): NextRequest {
+  return new NextRequest(new URL(url, "http://localhost"), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
 }
 
 beforeEach(() => {
@@ -109,20 +117,20 @@ describe("POST /api/history/:id/resend", () => {
   });
 });
 
-describe("GET /api/history/recontact", () => {
+describe("POST /api/history/recontact", () => {
   it("returns the previously-contacted subset", async () => {
     vi.mocked(getRecontactInfo).mockResolvedValue({
       previouslyContacted: [{ contactId: "c1", lastSentAt: "2026-07-10T00:00:00.000Z" }],
     });
-    const res = await RECONTACT(req("/api/history/recontact?contactIds=c1,c2"));
+    const res = await RECONTACT(jsonReq("/api/history/recontact", { contactIds: ["c1", "c2"] }));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ previouslyContacted: [{ contactId: "c1", lastSentAt: "2026-07-10T00:00:00.000Z" }] });
     expect(getRecontactInfo).toHaveBeenCalledWith("u1", ["c1", "c2"]);
   });
 
-  it("handles an empty contactIds param", async () => {
+  it("handles an empty/omitted contactIds body", async () => {
     vi.mocked(getRecontactInfo).mockResolvedValue({ previouslyContacted: [] });
-    const res = await RECONTACT(req("/api/history/recontact?contactIds="));
+    const res = await RECONTACT(jsonReq("/api/history/recontact", {}));
     expect(res.status).toBe(200);
     expect(getRecontactInfo).toHaveBeenCalledWith("u1", []);
   });
