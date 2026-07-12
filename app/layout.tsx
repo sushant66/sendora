@@ -4,6 +4,7 @@ import { LayerProvider } from "@astryxdesign/core/Layer";
 // Our editable theme, compiled by `pnpm exec astryx theme build lib/theme/neutralTheme.ts`.
 // Import the built artifact (server-safe), not the defineTheme source (client-only).
 import { neutralTheme } from "@/lib/theme/neutral";
+import { NavProgress } from "@/components/ui/nav-progress";
 // Astryx base styles (required — components render unstyled without these).
 import "@astryxdesign/core/reset.css";
 import "@astryxdesign/core/astryx.css";
@@ -26,6 +27,9 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <Theme theme={neutralTheme} mode="system">
+          {/* Immediate top-of-page feedback for every navigation, before the destination
+              route finishes rendering. */}
+          <NavProgress />
           {/* Provides the themed toast/overlay viewport. Without it, useToast() self-mounts a
               fallback viewport on document.body — outside the scoped Theme subtree — so toasts
               lose the theme's inverted-surface tokens and render with broken contrast. */}
