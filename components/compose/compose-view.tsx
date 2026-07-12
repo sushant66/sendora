@@ -217,7 +217,8 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
         setAccount({ connected: false });
         toast({ body: "Connect your Gmail to send a test.", type: "error" });
       } else if (err instanceof ApiError && err.status === 422) {
-        toast({ body: "Add a subject and body first.", type: "error" });
+        const fieldMsg = err.body.fields ? Object.values(err.body.fields)[0] : undefined;
+        toast({ body: fieldMsg ?? "Add a subject and body first.", type: "error" });
       } else {
         toast({ body: "Something went wrong sending the test.", type: "error" });
       }
@@ -244,7 +245,8 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
         setAccount({ connected: false });
         toast({ body: "Connect your Gmail before sending.", type: "error" });
       } else if (err instanceof ApiError && err.status === 422) {
-        toast({ body: "Add recipients, a subject, and a body before sending.", type: "error" });
+        const fieldMsg = err.body.fields ? Object.values(err.body.fields)[0] : undefined;
+        toast({ body: fieldMsg ?? "Add recipients, a subject, and a body before sending.", type: "error" });
       } else {
         toast({ body: "Something went wrong sending.", type: "error" });
       }

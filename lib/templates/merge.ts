@@ -145,6 +145,18 @@ export function findUnsupportedTokens(input: string): string[] {
 }
 
 /**
+ * True when the input contains a `{{` or `}}` that is not part of a complete, well-formed
+ * `{{token}}` (an unclosed or malformed merge field, e.g. `{{first_name`, `{{}}`, or
+ * `{{first name}}`). Complete tokens are ignored here — an unknown-but-complete token like
+ * `{{salary}}` is reported by {@link findUnsupportedTokens} instead. Guards SC-002: a stray
+ * brace fragment would otherwise pass save-time validation and ship as a literal in the email.
+ */
+export function hasMalformedMergeSyntax(input: string): boolean {
+  const stripped = input.replace(/\{\{\s*[^}\s]+\s*\}\}/g, "");
+  return stripped.includes("{{") || stripped.includes("}}");
+}
+
+/**
  * Render one string against a merge context. Every `{{token}}` is replaced; unsupported
  * tokens are removed with a warning (they should never reach here — templates validate at
  * save). `escapeValue` transforms each resolved value before substitution — pass

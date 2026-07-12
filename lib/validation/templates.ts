@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { findUnsupportedTokens } from "@/lib/templates/merge";
+import { findUnsupportedTokens, hasMalformedMergeSyntax } from "@/lib/templates/merge";
+
+/** Shown when a field has an unclosed/malformed merge token (SC-002). */
+const MALFORMED_MERGE_MESSAGE = "Unclosed merge field. Fields must look like {{first_name}}, with no spaces.";
 
 /**
  * Zod contracts for templates (User Story 2 preview + User Story 3 CRUD). Merge tokens are
@@ -10,11 +13,22 @@ import { findUnsupportedTokens } from "@/lib/templates/merge";
 /** Custom template create/edit (US3, FR-009). Structural validation only; merge-token
  *  validation (FR-011) is a distinct check so it maps to the `unsupported_merge_fields`
  *  contract error rather than the generic 422 shape. */
-export const TemplateInputSchema = z.object({
-  name: z.string().trim().min(1, "a template name is required"),
-  subject: z.string().trim().min(1, "a subject is required"),
-  bodyHtml: z.string().min(1, "the template body can't be empty"),
-});
+export const TemplateInputSchema = z
+  .object({
+    name: z.string().trim().min(1, "a template name is required"),
+    subject: z.string().trim().min(1, "a subject is required"),
+    bodyHtml: z.string().min(1, "the template body can't be empty"),
+  })
+  .superRefine((val, ctx) => {
+    // An unclosed `{{` passes the token vocabulary check (which only sees complete tokens),
+    // so flag it here per field before it can ship as a literal placeholder (SC-002).
+    if (hasMalformedMergeSyntax(val.subject)) {
+      ctx.addIssue({ code: "custom", path: ["subject"], message: MALFORMED_MERGE_MESSAGE });
+    }
+    if (hasMalformedMergeSyntax(val.bodyHtml)) {
+      ctx.addIssue({ code: "custom", path: ["bodyHtml"], message: MALFORMED_MERGE_MESSAGE });
+    }
+  });
 export type TemplateInput = z.infer<typeof TemplateInputSchema>;
 
 /** Distinct `{{tokens}}` in the input that are not part of the supported vocabulary (FR-011). */
