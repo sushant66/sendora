@@ -204,6 +204,30 @@ the version it replaced becomes history.
 
 ---
 
+## Post-ship fix: T042 — dedicated Replace action (resolves FR-005/FR-010 contradiction)
+
+- [X] T042 Live testing against the real app (T041) surfaced that FR-005 ("uploading a
+  duplicate label is rejected") and FR-010/US4 ("uploading under an existing label
+  replaces it") described contradictory behavior for the same trigger. `uploadResume`
+  had implemented only FR-005, so replacing a resume required manually deleting it first,
+  then re-uploading — the two-step workaround this task removes. Resolved by adding a
+  **dedicated** `replaceResume` service function + `POST /api/resumes/:id/replace` route
+  (mirrors `restoreResume`'s `db.batch` atomic-swap pattern) and a "Replace" row action in
+  the UI, rather than making the plain upload endpoint context-dependent — `uploadResume`
+  and its existing tests are untouched, so FR-005 stays true for the plain flow with zero
+  regression risk. Also added a version `Badge` to the active row's label cell (previously
+  only archived/history rows showed their version number, so nothing indicated the active
+  row was itself a specific version in the same sequence revealed by the expand chevron).
+  See `specs/002-resume-storage/spec.md` FR-016 and the design plan for the full rationale.
+  - New: `tests/contract/resumes-replace.test.ts` (5 tests: 200/422×2/404/401)
+  - Updated: `tests/e2e/resumes-restore.spec.ts` (uses the new Replace action to create a
+    second version instead of a second plain upload, which now correctly 409s)
+  - Unchanged (confirmed still correct): `tests/contract/resumes-upload.test.ts`,
+    `tests/e2e/resumes-upload.spec.ts` — the plain upload flow's reject-on-duplicate
+    behavior never changed
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies

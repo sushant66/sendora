@@ -4,7 +4,7 @@ import { resumes, type ResumeRow } from "@/lib/db/schema";
 import { ConflictError, NotFoundError } from "@/lib/errors";
 import { r2Storage } from "@/lib/storage/r2-client";
 import type { ResumeStorage } from "@/lib/storage/types";
-import { MAX_ACTIVE_RESUMES, type ResumeUploadInput } from "@/lib/validation/resumes";
+import { MAX_ACTIVE_RESUMES, type ResumeFile, type ResumeUploadInput } from "@/lib/validation/resumes";
 import type { Resume } from "./types";
 
 /**
@@ -174,12 +174,80 @@ export async function restoreResume(userId: string, id: string, db: Db = default
   const now = new Date();
   const reactivate = db.update(resumes).set({ deletedAt: null, updatedAt: now }).where(eq(resumes.id, target.id));
   if (currentActive) {
+    // Archive the currently-active row BEFORE reactivating the target — the partial
+    // unique index on (user_id, label) WHERE deleted_at IS NULL is checked per-statement,
+    // not deferred to end of transaction, so reactivating first would momentarily leave
+    // two active rows under the same label and violate it.
     const archiveCurrent = db.update(resumes).set({ deletedAt: now, updatedAt: now }).where(eq(resumes.id, currentActive.id));
-    await db.batch([reactivate, archiveCurrent]);
+    await db.batch([archiveCurrent, reactivate]);
   } else {
     await reactivate;
   }
 
   const [row] = await db.select().from(resumes).where(eq(resumes.id, target.id)).limit(1);
+  return toResume(row!);
+}
+
+/**
+ * Replace an active resume with a new file, in one step (a dedicated action, not a side
+ * effect of `uploadResume` — see specs/002-resume-storage/plan for why these are separate:
+ * `uploadResume` keeps unconditionally rejecting a duplicate label, FR-005/US1 unchanged).
+ * Archives the target and inserts the new version atomically via `db.batch` (same reason
+ * as `restoreResume`: this project's Neon HTTP driver has no `db.transaction()` support).
+ *
+ * Known, accepted gap at this feature's single-user scale: if two requests replace/delete
+ * the same resume at nearly the same instant, `archiveOld`'s `isNull(deletedAt)` guard
+ * could silently affect 0 rows while `insertNew` still proceeds — matching the same
+ * unguarded-window risk `restoreResume` already carries between its reads and its batch.
+ */
+export async function replaceResume(
+  userId: string,
+  id: string,
+  file: ResumeFile,
+  opts: { db?: Db; storage?: ResumeStorage } = {},
+): Promise<Resume> {
+  const db = opts.db ?? defaultDb;
+  const storage = opts.storage ?? r2Storage;
+
+  const [target] = await db
+    .select()
+    .from(resumes)
+    .where(and(eq(resumes.id, id), eq(resumes.userId, userId)))
+    .limit(1);
+  if (!target || target.deletedAt !== null) throw new NotFoundError();
+
+  const priorVersions = await db
+    .select({ version: resumes.version })
+    .from(resumes)
+    .where(and(eq(resumes.userId, userId), eq(resumes.label, target.label)));
+  const version = nextResumeVersion(priorVersions.map((v) => v.version));
+
+  const newId = crypto.randomUUID();
+  const storageKey = `${userId}/${newId}.pdf`;
+  await storage.uploadObject(storageKey, file.buffer, "application/pdf");
+
+  const now = new Date();
+  const archiveOld = db
+    .update(resumes)
+    .set({ deletedAt: now, updatedAt: now })
+    .where(and(eq(resumes.id, target.id), isNull(resumes.deletedAt)));
+  const insertNew = db.insert(resumes).values({
+    id: newId,
+    userId,
+    label: target.label,
+    version,
+    fileName: file.name,
+    storageKey,
+    fileSize: file.size,
+  });
+
+  try {
+    await db.batch([archiveOld, insertNew]);
+  } catch (err) {
+    await storage.deleteObject(storageKey).catch(() => {});
+    throw err;
+  }
+
+  const [row] = await db.select().from(resumes).where(eq(resumes.id, newId)).limit(1);
   return toResume(row!);
 }

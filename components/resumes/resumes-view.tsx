@@ -19,8 +19,10 @@ export function ResumesView() {
   const toast = useToast();
   const [allResumes, setAllResumes] = useState<Resume[] | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [replacing, setReplacing] = useState<Resume | null>(null);
   const [deleting, setDeleting] = useState<Resume | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
 
   async function load() {
     try {
@@ -59,7 +61,8 @@ export function ResumesView() {
       list.push(r);
       archivedByLabel.set(r.label, list);
     }
-    for (const list of archivedByLabel.values()) list.sort((a, b) => a.version - b.version);
+    // Newest-first — the most recently replaced version reads at the top of the history.
+    for (const list of archivedByLabel.values()) list.sort((a, b) => b.version - a.version);
 
     return items
       .filter((r) => r.status === "active")
@@ -69,7 +72,13 @@ export function ResumesView() {
 
   function onUploaded(resume: Resume) {
     void load();
-    toast({ body: `Uploaded "${resume.label}".` });
+    toast({ body: replacing ? `Updated "${resume.label}".` : `Uploaded "${resume.label}".` });
+  }
+
+  function closeUploadDialog(open: boolean) {
+    if (open) return;
+    setUploadOpen(false);
+    setReplacing(null);
   }
 
   async function confirmDelete() {
@@ -89,12 +98,15 @@ export function ResumesView() {
   }
 
   async function onRestore(version: Resume) {
+    setRestoringId(version.id);
     try {
       await apiRequest(`/api/resumes/${version.id}/restore`, { method: "POST" });
       await load();
       toast({ body: `Restored "${version.label}" (version ${version.version}).` });
     } catch {
       toast({ body: "Couldn't restore that version.", type: "error" });
+    } finally {
+      setRestoringId(null);
     }
   }
 
@@ -117,10 +129,21 @@ export function ResumesView() {
           actions={<Button label="Upload resume" variant="primary" onClick={() => setUploadOpen(true)} />}
         />
       ) : (
-        <ResumeList resumes={resumeTree} onRequestDelete={setDeleting} onRestore={onRestore} />
+        <ResumeList
+          resumes={resumeTree}
+          onRequestDelete={setDeleting}
+          onRequestReplace={setReplacing}
+          onRestore={onRestore}
+          restoringId={restoringId}
+        />
       )}
 
-      <UploadResumeDialog isOpen={uploadOpen} onOpenChange={setUploadOpen} onUploaded={onUploaded} />
+      <UploadResumeDialog
+        isOpen={uploadOpen || replacing !== null}
+        onOpenChange={closeUploadDialog}
+        onUploaded={onUploaded}
+        replacing={replacing ?? undefined}
+      />
       <AlertDialog
         isOpen={deleting !== null}
         onOpenChange={(open) => { if (!open) setDeleting(null); }}

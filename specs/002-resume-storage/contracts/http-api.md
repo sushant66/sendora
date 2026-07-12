@@ -40,6 +40,27 @@ Uploads a new resume. `multipart/form-data`: `label` (text field), `file` (PDF).
 
 ---
 
+## `POST /api/resumes/:id/replace`
+
+Replaces an active resume with a new file, archiving the old version (US4, FR-010,
+FR-016). Multipart: `file` (PDF) only — no `label` field; the label is inherited from the
+target resume. This is a **distinct action from `POST /api/resumes`**, not an alternate
+mode of it: the plain upload endpoint above always rejects a duplicate active label
+(FR-005), unconditionally; Replace is the only way to update an existing label's active
+resume in place.
+
+- Validates `file` the same way plain upload does (≤10MB, `application/pdf` content-type
+  **and** a `%PDF-` magic-byte check) — **422** on failure.
+- **200** → the new active `Resume` (`version` is `previous max for this label + 1`).
+- **404** if the id doesn't exist, isn't owned by the caller, or isn't currently active
+  (replace only applies to a currently-active resume; an archived one is restored, not
+  replaced).
+- Never returns `409 label_taken` — the label isn't submitted, so there's no new-label
+  collision possible, and this action never changes the active-resume count (FR-006's cap
+  does not apply to Replace).
+
+---
+
 ## `GET /api/resumes/:id`
 
 Streams the resume's PDF (active or archived — US2, US4).
