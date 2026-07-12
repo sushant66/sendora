@@ -5,13 +5,16 @@ import { ok, created } from "@/lib/http/responses";
 import { ContactInputSchema } from "@/lib/validation/contacts";
 import { createContact, listContacts } from "@/lib/contacts/service";
 
-/** GET /api/contacts?query=&cursor= — search + list the caller's contacts (US1). */
+/** GET /api/contacts?query=&cursor=&all= — search + list the caller's contacts (US1).
+ *  `all=1` returns the full set unpaginated (used by Compose's recipient picker). */
 export const GET = route(async (req: NextRequest) => {
   const user = await requireUser();
   const { searchParams } = new URL(req.url);
+  const all = searchParams.get("all") === "1";
   const result = await listContacts(user.id, {
     query: searchParams.get("query") ?? undefined,
     cursor: searchParams.get("cursor") ?? undefined,
+    all,
   });
   return ok(result);
 });

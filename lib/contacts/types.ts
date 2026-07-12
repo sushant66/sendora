@@ -22,4 +22,11 @@ export type ImportResult = {
   imported: number;
   duplicates: { row: number; email: string }[];
   invalid: { row: number; reason: string }[];
+  /**
+   * IDs of every emailable contact in this import batch: the newly created ones plus the
+   * duplicates that already existed. Powers the "Compose to these contacts" handoff so the
+   * user does not have to re-select the list by hand. Invalid rows have no contact, so they
+   * are absent here.
+   */
+  contactIds: string[];
 };

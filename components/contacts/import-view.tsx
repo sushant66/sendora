@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { VStack } from "@astryxdesign/core/VStack";
 import { HStack } from "@astryxdesign/core/HStack";
 import { Heading } from "@astryxdesign/core/Heading";
@@ -21,13 +22,21 @@ import { parseXlsx } from "@/lib/import/xlsx";
 import { parsePaste } from "@/lib/import/paste";
 import { applyMapping } from "@/lib/import/columns";
 import type { ColumnMapping, ParseResult, RawImportRow } from "@/lib/import/types";
-import type { ImportSource } from "@/lib/validation/contacts";
+import { MAX_IMPORT_ROWS, type ImportSource } from "@/lib/validation/contacts";
 import type { ImportResult } from "@/lib/contacts/types";
 import { ApiError, apiRequest } from "@/lib/api/client";
+import { stashPreselect } from "@/lib/compose/preselect";
 
 type Method = "upload" | "paste";
 type MappingField = keyof ColumnMapping;
 const NONE = "__none__";
+
+// Files are parsed entirely in the browser (only the parsed rows are POSTed), so a huge file
+// would read gigabytes into the tab and crash it before anything useful happens. Cap the file
+// size well above a legitimate contact list (5,000 rows is well under 1 MB) so oversized files
+// fail fast with a clear message instead of freezing or crashing.
+const MAX_IMPORT_FILE_MB = 10;
+const MAX_IMPORT_FILE_BYTES = MAX_IMPORT_FILE_MB * 1024 * 1024;
 
 export function ImportView() {
   const toast = useToast();
@@ -50,6 +59,15 @@ export function ImportView() {
       setParseError("No rows found. Check that the file/text has a header row and at least one data row.");
       return;
     }
+    if (pr.rows.length > MAX_IMPORT_ROWS) {
+      // Stop here rather than parse-then-POST-then-reject: the whole import would fail the
+      // server's row cap anyway, so give instant, specific feedback instead of a round-trip error.
+      setParsed(null);
+      setParseError(
+        `That has ${pr.rows.length.toLocaleString()} rows. You can import up to ${MAX_IMPORT_ROWS.toLocaleString()} at a time. Split it into smaller files and import them one after another.`,
+      );
+      return;
+    }
     setSource(src);
     setParsed(pr);
     setMapping(pr.mapping);
@@ -58,6 +76,15 @@ export function ImportView() {
   async function onFile(file: File | File[] | null) {
     const f = Array.isArray(file) ? file[0] : file;
     if (!f) return;
+    // Guard on size BEFORE reading the file, so an oversized upload can't OOM the tab.
+    if (f.size > MAX_IMPORT_FILE_BYTES) {
+      setParsed(null);
+      setResult(null);
+      setParseError(
+        `That file is ${(f.size / (1024 * 1024)).toFixed(1)} MB. Import files must be under ${MAX_IMPORT_FILE_MB} MB. Export just the columns you need (name and email are enough), or split it into smaller files.`,
+      );
+      return;
+    }
     try {
       const isXlsx = /\.xlsx?$/i.test(f.name) || f.name.toLowerCase().endsWith(".xls");
       if (isXlsx) {
@@ -167,7 +194,7 @@ export function ImportView() {
               accept=".csv,.xlsx,.xls,text/csv"
               value={null}
               onChange={onFile}
-              description="CSV or Excel (.xlsx). The first row should be column headers."
+              description={`CSV or Excel (.xlsx). The first row should be column headers. Up to ${MAX_IMPORT_ROWS.toLocaleString()} contacts per import.`}
             />
           ) : (
             <VStack gap={3} align="stretch">
@@ -252,8 +279,19 @@ export function ImportView() {
 }
 
 function ImportSummary({ result, onDone }: { result: ImportResult; onDone: () => void }) {
-  const { imported, duplicates, invalid } = result;
+  const router = useRouter();
+  const { imported, duplicates, invalid, contactIds } = result;
   const skipped = duplicates.length + invalid.length;
+  const batchCount = contactIds.length;
+  const canCompose = batchCount > 0;
+
+  // Carry the batch straight into Compose so the user never re-selects the list they just
+  // imported. The stash must land before the client navigation reads it, so write then push.
+  function composeToBatch() {
+    stashPreselect(contactIds);
+    router.push("/compose");
+  }
+
   return (
     <VStack gap={4}>
       <Banner
@@ -299,10 +337,24 @@ function ImportSummary({ result, onDone }: { result: ImportResult; onDone: () =>
         </Card>
       )}
 
-      <HStack gap={2}>
-        <Button as={Link} href="/contacts" label="View contacts" variant="primary" />
-        <Button label="Import more" variant="secondary" onClick={onDone} />
-      </HStack>
+      <VStack gap={2}>
+        <HStack gap={2}>
+          {canCompose && (
+            <Button
+              label={`Compose to ${batchCount} contact${batchCount === 1 ? "" : "s"}`}
+              variant="primary"
+              onClick={composeToBatch}
+            />
+          )}
+          <Button as={Link} href="/contacts" label="View contacts" variant={canCompose ? "secondary" : "primary"} />
+          <Button label="Import more" variant={canCompose ? "ghost" : "secondary"} onClick={onDone} />
+        </HStack>
+        {canCompose && batchCount > imported && (
+          <Text color="secondary" size="sm">
+            Includes {batchCount - imported} already in your contacts. You&apos;ll see a heads-up before emailing anyone twice.
+          </Text>
+        )}
+      </VStack>
     </VStack>
   );
 }

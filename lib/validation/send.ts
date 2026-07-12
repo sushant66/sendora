@@ -5,9 +5,12 @@ import { z } from "zod";
  * `contactIds` length drives single vs bulk (contracts/http-api.md). `override` carries the
  * edited subject/body from the compose/preview step.
  */
+/** Max recipients in a single send. Shared by the compose client guard and server validation. */
+export const MAX_SEND_RECIPIENTS = 200;
+
 export const SendRequestSchema = z
   .object({
-    contactIds: z.array(z.string().min(1)).min(1, "select at least one recipient").max(200, "too many recipients for one send"),
+    contactIds: z.array(z.string().min(1)).min(1, "select at least one recipient").max(MAX_SEND_RECIPIENTS, "too many recipients for one send"),
     templateId: z.string().min(1).optional(),
     override: z
       .object({
