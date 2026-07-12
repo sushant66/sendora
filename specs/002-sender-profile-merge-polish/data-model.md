@@ -96,6 +96,7 @@ recruiter_contact 1───* send_record   (unchanged; ON DELETE SET NULL; unaf
 - Replacing the plain unique index with a partial one is a drop-and-create in the migration; no
   data change.
 - The rewritten "cold outreach" starter (FR-017) is a change to the seed source
-  (`lib/templates/starters.ts`). System templates are seeded per user; the migration/seed path
-  MUST refresh already-seeded system rows to the corrected copy (re-seed on read, or a one-time
-  content update keyed by the starter slug) so existing accounts also get the fix.
+  (`lib/templates/starters.ts`). System templates are **shared rows** (`user_id = null`), seeded
+  by the idempotent `lib/db/seed.ts` (it deletes all system rows and re-inserts from source, so
+  it is safe to re-run). The fix is therefore: edit `starters.ts` and re-run the seed to refresh
+  the single shared set. No per-user migration and no schema change are required for this part.

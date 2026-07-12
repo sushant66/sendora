@@ -136,8 +136,8 @@ reading and requires a confirm; confirm the "cold outreach" starter has no attac
 - [ ] T036 [US3] `POST /api/send/test` route in `app/api/send/test/route.ts` (depends T034, T035)
 - [ ] T037 [P] [US3] Missing-value computation util over a selection (used tokens × contacts × profile) in `lib/compose/missing-values.ts` (depends T005)
 - [ ] T038 [US3] "Send test to myself" control in compose, built **through `/impeccable`**, in `components/compose/compose-view.tsx` (depends T036)
-- [ ] T039 [US3] Missing-value pre-send gate UI (summary + how-it-reads sample via the existing preview + explicit confirm), built **through `/impeccable`**, in `components/compose/` (depends T037)
-- [ ] T040 [US3] Rewrite the "Intro: cold outreach" starter to reference a link (not an attachment) and re-seed the corrected system template on read, in `lib/templates/starters.ts` and `lib/templates/service.ts`
+- [ ] T039 [US3] Missing-value pre-send gate UI (summary + how-it-reads sample via the existing preview, using the first affected recipient in the selection as the representative, + explicit confirm), built **through `/impeccable`**, in `components/compose/` (depends T037)
+- [ ] T040 [US3] Rewrite the "Intro: cold outreach" starter to reference a link (not an attachment) and demonstrate a `my_*` sign-off (name / title / link, FR-004) in `lib/templates/starters.ts`, then refresh the shared system rows by re-running the idempotent seed `lib/db/seed.ts`. System starters are shared `user_id=null` rows; no per-user migration and no schema change are needed. (F1, U2)
 
 **Checkpoint**: US1, US2, US3 all work independently.
 
@@ -157,7 +157,7 @@ stands; start a second delete during a pending undo and confirm the first commit
 ### Tests (write first, must fail)
 
 - [ ] T041 [P] [US4] Contract test for `POST /api/contacts/bulk-delete` (ids + matchAll) and `POST /api/contacts/restore` in `tests/contract/bulk-delete.test.ts`
-- [ ] T042 [P] [US4] Integration test: soft-delete hides rows; undo restores identity + history linkage; email-collision rows skipped; a new delete commits the prior batch, in `tests/integration/bulk-delete.test.ts`
+- [ ] T042 [P] [US4] Unit + integration tests for soft-delete/restore: **unit** for collision-skip on restore and single-slot commit-on-new-delete in `tests/unit/soft-delete.test.ts` (T1, Constitution II); **integration** for delete hides rows, undo restores identity + history linkage, and **user-scoping** (a user cannot delete or restore another user's contacts or `deletedBatch`, FR-024/C1) in `tests/integration/bulk-delete.test.ts`
 - [ ] T043 [P] [US4] E2E: multi-select, select-all-matching, delete, undo, lapse-commits, in `tests/e2e/bulk-contacts.spec.ts`
 
 ### Implementation
@@ -165,7 +165,7 @@ stands; start a second delete during a pending undo and confirm the first commit
 - [ ] T044 [US4] Add `deleted_at` + `deleted_batch` columns and convert the unique index to partial (`WHERE deleted_at IS NULL`) on `recruiter_contact` in `lib/db/schema.ts` + migration
 - [ ] T045 [US4] Filter `deleted_at IS NULL` in every contact read path (list, search, `all=1`, import dedup, recontact lookup) in `lib/contacts/` (depends T044)
 - [ ] T046 [P] [US4] Bulk-delete and restore request Zod schemas in `lib/validation/contacts.ts`
-- [ ] T047 [US4] Soft-delete + restore service (ids or matchAll; single `deletedBatch`; skip email collisions on restore) in `lib/contacts/soft-delete.ts` (depends T044, T046)
+- [ ] T047 [US4] Soft-delete + restore service (ids or matchAll; single `deletedBatch`; skip email collisions on restore), **scoped to the current user for both delete and restore so another user's contacts or `deletedBatch` can never be affected (FR-024)**, in `lib/contacts/soft-delete.ts` (depends T044, T046)
 - [ ] T048 [US4] `POST /api/contacts/bulk-delete` route in `app/api/contacts/bulk-delete/route.ts` (depends T047)
 - [ ] T049 [US4] `POST /api/contacts/restore` route in `app/api/contacts/restore/route.ts` (depends T047)
 - [ ] T050 [US4] Multi-select rows + selection bar + "select all N matching", built **through `/impeccable`**, in `components/contacts/contacts-view.tsx` (depends T048)
@@ -192,7 +192,7 @@ cleanly if built first.
 
 ### Implementation
 
-- [ ] T053 [US5] Reorder the dashboard "Get set up" steps (import → personalize/profile → first send) and add the optional profile step, built **through `/impeccable`**, in `components/dashboard/dashboard-view.tsx`
+- [ ] T053 [US5] Reorder the dashboard "Get set up" steps (import, then personalize/profile, then first send), add the optional profile step, and ensure the personalize step surfaces a **real rendered template preview reachable without a connected inbox** so a rendered template is seen before any Gmail prompt (SC-007, U1), built **through `/impeccable`**, in `components/dashboard/dashboard-view.tsx`
 - [ ] T054 [US5] Confirm the Gmail connection prompt surfaces at first send (compose gating copy), in `components/compose/compose-view.tsx`
 
 **Checkpoint**: All five stories independently functional.

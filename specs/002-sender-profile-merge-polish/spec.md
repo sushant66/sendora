@@ -353,7 +353,9 @@ point of the first send.
 
 - **FR-024**: A job seeker MUST only be able to view and act on their own profile, contacts,
   templates, and sending history (unchanged from the existing product, restated for the new
-  profile entity).
+  profile entity). In particular, bulk delete and undo/restore MUST be scoped to the current
+  user: a job seeker MUST NOT be able to delete or restore another user's contacts, or a
+  `deletedBatch` they do not own.
 
 ### Key Entities *(include if data involved)*
 
