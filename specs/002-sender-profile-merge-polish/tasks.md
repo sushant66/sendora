@@ -156,20 +156,20 @@ stands; start a second delete during a pending undo and confirm the first commit
 
 ### Tests (write first, must fail)
 
-- [ ] T041 [P] [US4] Contract test for `POST /api/contacts/bulk-delete` (ids + matchAll) and `POST /api/contacts/restore` in `tests/contract/bulk-delete.test.ts`
-- [ ] T042 [P] [US4] Unit + integration tests for soft-delete/restore: **unit** for collision-skip on restore and single-slot commit-on-new-delete in `tests/unit/soft-delete.test.ts` (T1, Constitution II); **integration** for delete hides rows, undo restores identity + history linkage, and **user-scoping** (a user cannot delete or restore another user's contacts or `deletedBatch`, FR-024/C1) in `tests/integration/bulk-delete.test.ts`
-- [ ] T043 [P] [US4] E2E: multi-select, select-all-matching, delete, undo, lapse-commits, in `tests/e2e/bulk-contacts.spec.ts`
+- [X] T041 [P] [US4] Contract test for `POST /api/contacts/bulk-delete` (ids + matchAll) and `POST /api/contacts/restore` in `tests/contract/bulk-delete.test.ts`
+- [X] T042 [P] [US4] Unit + integration tests for soft-delete/restore: **unit** for collision-skip on restore and single-slot commit-on-new-delete in `tests/unit/soft-delete.test.ts` (T1, Constitution II); **integration** for delete hides rows, undo restores identity + history linkage, and **user-scoping** (a user cannot delete or restore another user's contacts or `deletedBatch`, FR-024/C1) in `tests/integration/bulk-delete.test.ts`
+- [X] T043 [P] [US4] E2E: multi-select, select-all-matching, delete, undo, lapse-commits, in `tests/e2e/bulk-contacts.spec.ts`
 
 ### Implementation
 
-- [ ] T044 [US4] Add `deleted_at` + `deleted_batch` columns and convert the unique index to partial (`WHERE deleted_at IS NULL`) on `recruiter_contact` in `lib/db/schema.ts` + migration
-- [ ] T045 [US4] Filter `deleted_at IS NULL` in every contact read path (list, search, `all=1`, import dedup, recontact lookup) in `lib/contacts/` (depends T044)
-- [ ] T046 [P] [US4] Bulk-delete and restore request Zod schemas in `lib/validation/contacts.ts`
-- [ ] T047 [US4] Soft-delete + restore service (ids or matchAll; single `deletedBatch`; skip email collisions on restore), **scoped to the current user for both delete and restore so another user's contacts or `deletedBatch` can never be affected (FR-024)**, in `lib/contacts/soft-delete.ts` (depends T044, T046)
-- [ ] T048 [US4] `POST /api/contacts/bulk-delete` route in `app/api/contacts/bulk-delete/route.ts` (depends T047)
-- [ ] T049 [US4] `POST /api/contacts/restore` route in `app/api/contacts/restore/route.ts` (depends T047)
-- [ ] T050 [US4] Multi-select rows + selection bar + "select all N matching", built **through `/impeccable`**, in `components/contacts/contacts-view.tsx` (depends T048)
-- [ ] T051 [US4] Bulk-delete confirm dialog + ~5s undo toast (single slot; commit on navigate-away; covers single delete too), built **through `/impeccable`**, in `components/contacts/` (depends T048, T049)
+- [X] T044 [US4] Add `deleted_at` + `deleted_batch` columns and convert the unique index to partial (`WHERE deleted_at IS NULL`) on `recruiter_contact` in `lib/db/schema.ts` + migration
+- [X] T045 [US4] Filter `deleted_at IS NULL` in every contact read path (list, search, `all=1`, import dedup, recontact lookup) in `lib/contacts/` (depends T044)
+- [X] T046 [P] [US4] Bulk-delete and restore request Zod schemas in `lib/validation/contacts.ts`
+- [X] T047 [US4] Soft-delete + restore service (ids or matchAll; single `deletedBatch`; skip email collisions on restore), **scoped to the current user for both delete and restore so another user's contacts or `deletedBatch` can never be affected (FR-024)**, in `lib/contacts/soft-delete.ts` (depends T044, T046)
+- [X] T048 [US4] `POST /api/contacts/bulk-delete` route in `app/api/contacts/bulk-delete/route.ts` (depends T047)
+- [X] T049 [US4] `POST /api/contacts/restore` route in `app/api/contacts/restore/route.ts` (depends T047)
+- [X] T050 [US4] Multi-select rows + selection bar + "select all N matching", built **through `/impeccable`**, in `components/contacts/contacts-view.tsx` (depends T048)
+- [X] T051 [US4] Bulk-delete confirm dialog + ~5s undo toast (single slot; commit on navigate-away; covers single delete too), built **through `/impeccable`**, in `components/contacts/` (depends T048, T049)
 
 **Checkpoint**: US4 works independently.
 

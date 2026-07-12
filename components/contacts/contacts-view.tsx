@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Table, proportional, pixel, type TableColumn } from "@astryxdesign/core/Table";
+import { Table, proportional, pixel, useTableSelection, type TableColumn } from "@astryxdesign/core/Table";
 import { VStack } from "@astryxdesign/core/VStack";
 import { HStack } from "@astryxdesign/core/HStack";
 import { Heading } from "@astryxdesign/core/Heading";
@@ -19,6 +19,11 @@ import type { Contact, ContactList } from "@/lib/contacts/types";
 import { ContactFormDialog } from "./contact-form-dialog";
 
 const SEARCH_DEBOUNCE_MS = 250;
+const UNDO_MS = 6000;
+
+/** What a pending delete targets: a single row, or the current selection (loaded ids or all
+ *  matching the search). */
+type PendingDelete = { mode: "single"; contact: Contact } | { mode: "selection" };
 
 export function ContactsView() {
   const toast = useToast();
@@ -30,30 +35,43 @@ export function ContactsView() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Contact | undefined>(undefined);
-  const [deleting, setDeleting] = useState<Contact | null>(null);
+
+  // Selection: explicitly checked loaded rows, plus a two-step "select all matching" mode that
+  // reaches beyond the loaded page (FR-020).
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectAllMatching, setSelectAllMatching] = useState(false);
+
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Track the latest search so out-of-order responses don't clobber newer results.
   const searchSeq = useRef(0);
 
-  const load = useCallback(async (q: string) => {
-    const seq = ++searchSeq.current;
-    setIsLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (q.trim()) params.set("query", q.trim());
-      const data = await apiRequest<ContactList>(`/api/contacts?${params}`);
-      if (seq !== searchSeq.current) return; // a newer search superseded this one
-      setContacts(data.items);
-      setNextCursor(data.nextCursor);
-    } catch {
-      if (seq === searchSeq.current) toast({ body: "Couldn't load contacts.", type: "error" });
-    } finally {
-      if (seq === searchSeq.current) setIsLoading(false);
-    }
-  }, [toast]);
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+    setSelectAllMatching(false);
+  }, []);
 
-  // Debounced search whenever the query changes (also the initial load).
+  const load = useCallback(
+    async (q: string) => {
+      const seq = ++searchSeq.current;
+      setIsLoading(true);
+      try {
+        const params = new URLSearchParams();
+        if (q.trim()) params.set("query", q.trim());
+        const data = await apiRequest<ContactList>(`/api/contacts?${params}`);
+        if (seq !== searchSeq.current) return; // a newer search superseded this one
+        setContacts(data.items);
+        setNextCursor(data.nextCursor);
+        clearSelection();
+      } catch {
+        if (seq === searchSeq.current) toast({ body: "Couldn't load contacts.", type: "error" });
+      } finally {
+        if (seq === searchSeq.current) setIsLoading(false);
+      }
+    },
+    [toast, clearSelection],
+  );
+
   useEffect(() => {
     const t = setTimeout(() => void load(query), query ? SEARCH_DEBOUNCE_MS : 0);
     return () => clearTimeout(t);
@@ -76,23 +94,88 @@ export function ContactsView() {
   }
 
   function onSaved(saved: Contact, mode: "created" | "updated") {
-    setContacts((prev) =>
-      mode === "updated" ? prev.map((c) => (c.id === saved.id ? saved : c)) : [saved, ...prev],
-    );
+    setContacts((prev) => (mode === "updated" ? prev.map((c) => (c.id === saved.id ? saved : c)) : [saved, ...prev]));
     toast({ body: mode === "created" ? `Added ${saved.name}.` : `Updated ${saved.name}.` });
   }
 
+  const allLoadedSelected = contacts.length > 0 && contacts.every((c) => selectedIds.has(c.id));
+  const canSelectAllMatching = !selectAllMatching && allLoadedSelected && Boolean(nextCursor);
+
+  const selection = useTableSelection<Contact>({
+    getIsItemSelected: (c) => selectAllMatching || selectedIds.has(c.id),
+    getIsAllSelected: () => selectAllMatching || allLoadedSelected,
+    getIsIndeterminate: () => !selectAllMatching && selectedIds.size > 0 && !allLoadedSelected,
+    onSelectItem: ({ item, isSelected }) => {
+      // Any individual toggle drops "all matching" back to an explicit loaded-row selection.
+      setSelectedIds((prev) => {
+        const next = new Set(selectAllMatching ? contacts.map((c) => c.id) : prev);
+        if (isSelected) next.add(item.id);
+        else next.delete(item.id);
+        return next;
+      });
+      setSelectAllMatching(false);
+    },
+    onSelectAll: ({ isAllSelected }) => {
+      setSelectAllMatching(false);
+      setSelectedIds(isAllSelected ? new Set(contacts.map((c) => c.id)) : new Set());
+    },
+  });
+
+  async function undoDelete(deletedBatch: string) {
+    try {
+      const { restored, skipped } = await apiRequest<{ restored: number; skipped: number }>("/api/contacts/restore", {
+        method: "POST",
+        json: { deletedBatch },
+      });
+      await load(query);
+      toast({
+        body:
+          skipped > 0
+            ? `Restored ${restored}. ${skipped} could not be restored (that email is in use again).`
+            : `Restored ${restored} contact${restored === 1 ? "" : "s"}.`,
+      });
+    } catch (err) {
+      const gone = err instanceof ApiError && err.status === 404;
+      toast({ body: gone ? "That undo is no longer available." : "Couldn't undo the delete.", type: "error" });
+    }
+  }
+
   async function confirmDelete() {
-    if (!deleting) return;
+    if (!pendingDelete) return;
     setIsDeleting(true);
     try {
-      await apiRequest(`/api/contacts/${deleting.id}`, { method: "DELETE" });
-      setContacts((prev) => prev.filter((c) => c.id !== deleting.id));
-      toast({ body: `Deleted ${deleting.name}.` });
-      setDeleting(null);
+      const body =
+        pendingDelete.mode === "single"
+          ? { ids: [pendingDelete.contact.id] }
+          : selectAllMatching
+            ? { matchAll: true, query: query.trim() || undefined }
+            : { ids: [...selectedIds] };
+
+      const { deletedBatch, count } = await apiRequest<{ deletedBatch: string; count: number }>(
+        "/api/contacts/bulk-delete",
+        { method: "POST", json: body },
+      );
+
+      // Update the loaded list. For matchAll we don't know exactly which loaded rows matched, so reload.
+      if (pendingDelete.mode === "selection" && selectAllMatching) {
+        await load(query);
+      } else {
+        const removed = new Set(pendingDelete.mode === "single" ? [pendingDelete.contact.id] : [...selectedIds]);
+        setContacts((prev) => prev.filter((c) => !removed.has(c.id)));
+        clearSelection();
+      }
+      setPendingDelete(null);
+
+      // Undo toast (single slot via a fixed id; a new delete replaces it, committing the prior).
+      toast({
+        uniqueID: "contacts-undo",
+        autoHideDuration: UNDO_MS,
+        body: `Deleted ${count} contact${count === 1 ? "" : "s"}.`,
+        endContent: <Button label="Undo" variant="ghost" size="sm" onClick={() => void undoDelete(deletedBatch)} />,
+      });
     } catch (err) {
-      const msg = err instanceof ApiError && err.status === 404 ? "That contact no longer exists." : "Couldn't delete the contact.";
-      toast({ body: msg, type: "error" });
+      const gone = err instanceof ApiError && err.status === 404;
+      toast({ body: gone ? "Those contacts no longer exist." : "Couldn't delete the contacts.", type: "error" });
     } finally {
       setIsDeleting(false);
     }
@@ -120,7 +203,7 @@ export function ContactsView() {
           items={[
             { label: "Edit", onClick: () => { setEditing(row); setFormOpen(true); } },
             { type: "divider" },
-            { label: "Delete", onClick: () => setDeleting(row) },
+            { label: "Delete", onClick: () => setPendingDelete({ mode: "single", contact: row }) },
           ]}
         />
       ),
@@ -128,6 +211,19 @@ export function ContactsView() {
   ];
 
   const hasSearch = query.trim().length > 0;
+  const selectionActive = selectAllMatching || selectedIds.size > 0;
+  const deleteDescription = useMemo(() => {
+    if (!pendingDelete) return "";
+    if (pendingDelete.mode === "single") {
+      return `${pendingDelete.contact.name} (${pendingDelete.contact.email}) will be removed. You can undo for a few seconds.`;
+    }
+    if (selectAllMatching) {
+      return hasSearch
+        ? `Every contact matching "${query.trim()}" will be removed. You can undo for a few seconds.`
+        : "Every contact will be removed. You can undo for a few seconds.";
+    }
+    return `${selectedIds.size} contact${selectedIds.size === 1 ? "" : "s"} will be removed. You can undo for a few seconds.`;
+  }, [pendingDelete, selectAllMatching, hasSearch, query, selectedIds]);
 
   return (
     <VStack gap={5}>
@@ -179,6 +275,15 @@ export function ContactsView() {
           )
         ) : (
           <VStack gap={3}>
+            {selectionActive && (
+              <SelectionBar
+                count={selectAllMatching ? null : selectedIds.size}
+                canSelectAllMatching={canSelectAllMatching}
+                onSelectAllMatching={() => setSelectAllMatching(true)}
+                onClear={clearSelection}
+                onDelete={() => setPendingDelete({ mode: "selection" })}
+              />
+            )}
             <Table
               data={contacts}
               columns={columns}
@@ -187,6 +292,7 @@ export function ContactsView() {
               dividers="rows"
               hasHover
               textOverflow="truncate"
+              plugins={{ selection }}
             />
             {nextCursor && (
               <HStack justify="center">
@@ -199,15 +305,57 @@ export function ContactsView() {
 
       <ContactFormDialog isOpen={formOpen} onOpenChange={setFormOpen} contact={editing} onSaved={onSaved} />
       <AlertDialog
-        isOpen={deleting !== null}
-        onOpenChange={(open) => { if (!open) setDeleting(null); }}
-        title="Delete contact?"
-        description={deleting ? `${deleting.name} (${deleting.email}) will be removed. This can't be undone.` : ""}
+        isOpen={pendingDelete !== null}
+        onOpenChange={(open) => { if (!open) setPendingDelete(null); }}
+        title={pendingDelete?.mode === "single" ? "Delete contact?" : "Delete contacts?"}
+        description={deleteDescription}
         actionLabel="Delete"
         onAction={confirmDelete}
         isActionLoading={isDeleting}
       />
     </VStack>
+  );
+}
+
+/** The bulk-selection bar: count, the two-step "select all matching", clear, and delete. */
+function SelectionBar({
+  count,
+  canSelectAllMatching,
+  onSelectAllMatching,
+  onClear,
+  onDelete,
+}: {
+  count: number | null;
+  canSelectAllMatching: boolean;
+  onSelectAllMatching: () => void;
+  onClear: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <HStack
+      justify="between"
+      align="center"
+      gap={3}
+      style={{
+        padding: "var(--spacing-2) var(--spacing-3)",
+        background: "var(--color-background-muted)",
+        border: "var(--border-width) solid var(--color-border)",
+        borderRadius: "var(--radius-element)",
+      }}
+    >
+      <HStack gap={3} align="center">
+        <Text size="sm" weight="medium">
+          {count === null ? "All matching contacts selected" : `${count} selected`}
+        </Text>
+        {canSelectAllMatching && (
+          <Button label="Select all matching" variant="ghost" size="sm" onClick={onSelectAllMatching} />
+        )}
+      </HStack>
+      <HStack gap={2} align="center">
+        <Button label="Clear" variant="ghost" size="sm" onClick={onClear} />
+        <Button label="Delete" variant="destructive" size="sm" onClick={onDelete} />
+      </HStack>
+    </HStack>
   );
 }
 

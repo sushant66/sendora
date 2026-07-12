@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db as defaultDb, type Db } from "@/lib/db/client";
 import { recruiterContacts } from "@/lib/db/schema";
 import { NotFoundError } from "@/lib/errors";
@@ -25,7 +25,13 @@ export async function previewTemplate(
   const [contact] = await db
     .select()
     .from(recruiterContacts)
-    .where(and(eq(recruiterContacts.id, request.contactId), eq(recruiterContacts.userId, userId)))
+    .where(
+      and(
+        eq(recruiterContacts.id, request.contactId),
+        eq(recruiterContacts.userId, userId),
+        isNull(recruiterContacts.deletedAt),
+      ),
+    )
     .limit(1);
   if (!contact) throw new NotFoundError("contact not found");
 

@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db as defaultDb, type Db } from "@/lib/db/client";
 import { recruiterContacts, sendBatches, sendRecords } from "@/lib/db/schema";
 import { NotFoundError } from "@/lib/errors";
@@ -130,7 +130,13 @@ export async function sendEmails(
   const contactRows = await db
     .select()
     .from(recruiterContacts)
-    .where(and(eq(recruiterContacts.userId, userId), inArray(recruiterContacts.id, request.contactIds)));
+    .where(
+      and(
+        eq(recruiterContacts.userId, userId),
+        inArray(recruiterContacts.id, request.contactIds),
+        isNull(recruiterContacts.deletedAt),
+      ),
+    );
   const byId = new Map(contactRows.map((c) => [c.id, c]));
   // Preserve request order (unknown/unowned ids skipped) before dedup.
   const ordered = request.contactIds.map((id) => byId.get(id)).filter((c): c is NonNullable<typeof c> => Boolean(c));
