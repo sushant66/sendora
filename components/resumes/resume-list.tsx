@@ -17,7 +17,9 @@ import { IconButton } from "@astryxdesign/core/IconButton";
 import type { Resume, ResumeNode } from "@/lib/resumes/types";
 
 function formatSize(bytes: number): string {
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  const mb = bytes / (1024 * 1024);
+  if (mb >= 0.1) return `${mb.toFixed(1)} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
 function formatDate(iso: string): string {

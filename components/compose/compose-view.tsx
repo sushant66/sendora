@@ -67,6 +67,17 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
   // Quick "email a recruiter you just got" flow: add a recipient inline without a detour to Contacts.
   const [addOpen, setAddOpen] = useState(false);
 
+  // Re-fetch the resume list (e.g. after a send finds the selected one is gone) so a
+  // since-deleted resume doesn't linger as a selectable option in the picker.
+  async function refreshResumes() {
+    try {
+      const r = await apiRequest<{ items: Resume[] }>("/api/resumes");
+      setResumes(r.items);
+    } catch {
+      /* keep the stale list rather than clearing it on a transient fetch failure */
+    }
+  }
+
   useEffect(() => {
     (async () => {
       try {
@@ -264,11 +275,13 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
         toast({ body: "Connect your Gmail before sending.", type: "error" });
       } else if (err instanceof ApiError && err.body.error === "resume_unavailable") {
         setResumeId("");
+        void refreshResumes();
         toast({ body: "That resume is no longer available. Pick another.", type: "error" });
       } else if (err instanceof ApiError && err.body.error === "attachment_too_large") {
         toast({ body: "That resume is too large to attach to this email. Try a smaller file.", type: "error" });
       } else if (err instanceof ApiError && err.status === 404) {
         setResumeId("");
+        void refreshResumes();
         toast({ body: "That resume could not be found. Pick another.", type: "error" });
       } else if (err instanceof ApiError && err.status === 422) {
         const fieldMsg = err.body.fields ? Object.values(err.body.fields)[0] : undefined;
@@ -401,10 +414,11 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
           <Selector
             label="Resume"
             hasSearch
+            hasClear
             placeholder="No attachment (optional)"
             options={resumes.map((r) => ({ value: r.id, label: `${r.label} (${r.fileName})` }))}
-            value={resumeId}
-            onChange={setResumeId}
+            value={resumeId || null}
+            onChange={(v) => setResumeId(v ?? "")}
           />
           <VStack gap={1} align="stretch">
             <HStack justify="between" align="center">
