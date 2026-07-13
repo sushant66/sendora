@@ -1,17 +1,23 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-`specs/002-sender-profile-merge-polish/plan.md`
+`specs/003-resume-attachments/plan.md`
 
-Active feature: **Sender profile, merge fields & outreach polish** (`002-sender-profile-merge-polish`).
-Builds on shipped **Recruiter Outreach** (`001-recruiter-outreach`, see its plan for stack/flows).
-Stack: Next.js (App Router, TS strict) + Astryx (React/StyleX) + NeonDB (Drizzle ORM);
-Auth.js + Google OAuth (`gmail.send`); sending behind a provider-agnostic seam.
-002 adds: a `sender_profile` table + namespaced `my_*` merge fields, an inline "/" slash-menu
-picker with atomic merge chips (Tiptap Suggestion + custom Node), soft-delete + undo on
-contacts, a test-send, a missing-value pre-send gate, and an onboarding reorder.
-Design docs live in `specs/002-sender-profile-merge-polish/` (spec, plan, research, data-model,
+Active feature: **Resume Attachments** (`003-resume-attachments`).
+Stack: Next.js (App Router, TS strict) + Astryx (React/StyleX) + NeonDB (Drizzle ORM) +
+Cloudflare R2 + Gmail `EmailProvider`. Connects 002-resume-storage's saved resumes to the
+send flow: an optional resume attached per send batch (nullable FK on `send_batch`,
+mirroring `templateId`), plus a user-editable resume file name.
+Design docs live in `specs/003-resume-attachments/` (spec, plan, research, data-model,
 contracts/, quickstart). Constitution: `.specify/memory/constitution.md`.
+
+Previous features: **Recruiter Outreach** (`001-recruiter-outreach`, shipped) — Auth.js +
+Google OAuth `gmail.send`, provider-agnostic `EmailProvider` seam. **Sender profile, merge
+fields & outreach polish** (`002-sender-profile-merge-polish`, shipped) — a `sender_profile`
+table + namespaced `my_*` merge fields, an inline "/" slash-menu picker with atomic merge
+chips, soft-delete + undo on contacts, a test-send, a missing-value pre-send gate. **Resume
+Storage** (`002-resume-storage`, shipped) — labeled PDF resume variants in NeonDB + R2. See
+each feature's `specs/` directory for its design docs.
 <!-- SPECKIT END -->
 
 <!-- ASTRYX:START -->

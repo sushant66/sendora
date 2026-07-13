@@ -23,6 +23,13 @@ export type HistoryRecord = {
  * `record` so the row renders and opens directly); a bulk send is many individual
  * emails (its per-recipient records are fetched on expand).
  */
+/**
+ * The resume (if any) attached to a batch's send(s) — 003-resume-attachments. `id` points
+ * at the exact resume row that went out (retained even after the shelf moves on), so the
+ * detail drawer can open the precise file this recipient received.
+ */
+export type AttachedResumeInfo = { id: string; label: string; fileName: string };
+
 export type HistoryEvent = {
   id: string; // batchId
   kind: "single" | "bulk";
@@ -31,6 +38,7 @@ export type HistoryEvent = {
   sent: number;
   failed: number;
   record: HistoryRecord | null; // present for single sends; null for bulk
+  attachedResume: AttachedResumeInfo | null;
 };
 
 export type HistoryList = { items: HistoryEvent[]; nextCursor: string | null };
@@ -44,10 +52,15 @@ export type HistoryDetail = HistoryRecord & {
   bodyText: string;
   fromEmail: string;
   batch: { id: string; kind: "single" | "bulk"; total: number; sent: number; failed: number };
+  attachedResume: AttachedResumeInfo | null;
 };
 
-/** Outcome of resending a record's snapshot. */
-export type ResendResult = { recordId: string; status: SendStatus; reason: string | null };
+/**
+ * Outcome of resending a record's snapshot. `attachmentDropped` is true when the original
+ * send had a resume attached but it could no longer be resolved (003-resume-attachments) —
+ * the resend still succeeds/fails on its own terms; the attachment simply wasn't included.
+ */
+export type ResendResult = { recordId: string; status: SendStatus; reason: string | null; attachmentDropped: boolean };
 
 export type RecontactInfo = {
   previouslyContacted: { contactId: string; lastSentAt: string }[];

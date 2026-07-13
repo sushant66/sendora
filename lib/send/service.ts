@@ -1,7 +1,7 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db as defaultDb, type Db } from "@/lib/db/client";
-import { recruiterContacts, sendBatches, sendRecords } from "@/lib/db/schema";
-import { NotFoundError } from "@/lib/errors";
+import { recruiterContacts, resumes, sendBatches, sendRecords } from "@/lib/db/schema";
+import { ConflictError, NotFoundError } from "@/lib/errors";
 import { normalizeEmail } from "@/lib/validation/contacts";
 import type { SendRequest } from "@/lib/validation/send";
 import { renderTemplate, type SenderContext } from "@/lib/templates/merge";
@@ -10,7 +10,9 @@ import { getProfile } from "@/lib/profile/service";
 import { senderContextFromProfile } from "@/lib/profile/context";
 import { getActiveAccount, markAccountExpired } from "@/lib/email/account-service";
 import { resolveProvider } from "@/lib/email/factory";
-import { REAUTH_REQUIRED, type EmailProvider, type ProviderCredentials } from "@/lib/email/provider";
+import { REAUTH_REQUIRED, type EmailProvider, type OutgoingMessage, type ProviderCredentials } from "@/lib/email/provider";
+import { getResumeFile } from "@/lib/resumes/service";
+import type { ResumeStorage } from "@/lib/storage/types";
 import type { SendResultItem, SendSummary } from "./types";
 
 /**
@@ -45,6 +47,36 @@ export type RenderedSend = {
   sentAt: Date | null;
 };
 
+/** Drain a resume's byte stream into a Buffer, once per batch (research.md §2). */
+export async function streamToBuffer(stream: ReadableStream<Uint8Array>): Promise<Buffer> {
+  const arrayBuffer = await new Response(stream).arrayBuffer();
+  return Buffer.from(arrayBuffer);
+}
+
+/**
+ * Resolve a submitted `resumeId` into an attachment, validating ownership and (for a
+ * fresh send, not a resend) that it's still active (research.md §4). Throws NotFoundError
+ * if unowned/unknown; ConflictError("resume_unavailable") if it exists but is archived.
+ */
+export async function resolveAttachment(
+  userId: string,
+  resumeId: string,
+  db: Db,
+  storage: ResumeStorage | undefined,
+): Promise<NonNullable<OutgoingMessage["attachment"]>> {
+  const [row] = await db
+    .select({ id: resumes.id, deletedAt: resumes.deletedAt })
+    .from(resumes)
+    .where(and(eq(resumes.userId, userId), eq(resumes.id, resumeId)))
+    .limit(1);
+  if (!row) throw new NotFoundError();
+  if (row.deletedAt !== null) throw new ConflictError("resume_unavailable");
+
+  const file = await getResumeFile(userId, resumeId, { db, storage });
+  const content = await streamToBuffer(file.body);
+  return { fileName: file.fileName, contentType: "application/pdf", content };
+}
+
 /** Dedup recipients on normalized email, preserving request order (FR-016). */
 export function dedupeRecipients(recipients: Recipient[]): Recipient[] {
   const seen = new Set<string>();
@@ -71,6 +103,7 @@ export async function runSendLoop(
   credentials: ProviderCredentials,
   onReauthRequired?: () => void | Promise<void>,
   sender?: SenderContext,
+  attachment?: OutgoingMessage["attachment"],
 ): Promise<RenderedSend[]> {
   const out: RenderedSend[] = [];
   let accountDisabled = false;
@@ -95,7 +128,7 @@ export async function runSendLoop(
       record.reason = REAUTH_REQUIRED;
     } else {
       const result = await provider.sendEmail(
-        { fromEmail: from.email, fromName: from.name ?? undefined, to: contact.email, subject: rendered.subject, bodyHtml: rendered.bodyHtml, bodyText: rendered.bodyText },
+        { fromEmail: from.email, fromName: from.name ?? undefined, to: contact.email, subject: rendered.subject, bodyHtml: rendered.bodyHtml, bodyText: rendered.bodyText, attachment },
         credentials,
       );
       if (result.status === "sent") {
@@ -119,7 +152,7 @@ export async function sendEmails(
   userId: string,
   request: SendRequest,
   fromName: string | null,
-  opts: { db?: Db; provider?: EmailProvider } = {},
+  opts: { db?: Db; provider?: EmailProvider; storage?: ResumeStorage } = {},
 ): Promise<SendSummary> {
   const db = opts.db ?? defaultDb;
 
@@ -153,10 +186,24 @@ export async function sendEmails(
   const profile = await getProfile(userId, db);
   const sender = senderContextFromProfile(profile, fromName);
 
+  // 003-resume-attachments: resolve + validate the optional attachment once per batch,
+  // before any recipient is contacted (FR-001/FR-005/FR-006). Message size stays under
+  // Gmail's limit structurally: the upload path caps resumes at 10MB (FR-003), so the
+  // base64-encoded message can't approach the ~25MB ceiling (FR-011) at send time.
+  const attachment = request.resumeId ? await resolveAttachment(userId, request.resumeId, db, opts.storage) : undefined;
+
   const kind = recipients.length > 1 ? "bulk" : "single";
   const [batch] = await db
     .insert(sendBatches)
-    .values({ userId, connectedAccountId: account.row.id, templateId: request.templateId ?? null, kind, total: recipients.length, status: "in_progress" })
+    .values({
+      userId,
+      connectedAccountId: account.row.id,
+      templateId: request.templateId ?? null,
+      attachedResumeId: request.resumeId ?? null,
+      kind,
+      total: recipients.length,
+      status: "in_progress",
+    })
     .returning();
   const batchId = batch!.id;
 
@@ -168,6 +215,7 @@ export async function sendEmails(
     account.credentials,
     () => markAccountExpired(account.row.id, db),
     sender,
+    attachment,
   );
 
   if (rendered.length > 0) {
@@ -215,8 +263,8 @@ export async function resendRecord(
   userId: string,
   recordId: string,
   fromName: string | null,
-  opts: { db?: Db; provider?: EmailProvider } = {},
-): Promise<{ recordId: string; status: "sent" | "failed"; reason: string | null }> {
+  opts: { db?: Db; provider?: EmailProvider; storage?: ResumeStorage } = {},
+): Promise<{ recordId: string; status: "sent" | "failed"; reason: string | null; attachmentDropped: boolean }> {
   const db = opts.db ?? defaultDb;
 
   const [rec] = await db
@@ -229,9 +277,33 @@ export async function resendRecord(
   const account = await getActiveAccount(userId, db);
   const provider = opts.provider ?? resolveProvider(account.providerKey);
 
+  // 003-resume-attachments: re-resolve the original batch's attachment (not a blind copy —
+  // research.md §5). A resend accepts an archived resume (unlike a fresh send), since it's
+  // reproducing a specific past attachment, not offering a fresh choice. A resolution
+  // failure (defensive-only path; no hard-delete exists today) degrades the resend rather
+  // than failing it.
+  const [originalBatch] = await db
+    .select({ attachedResumeId: sendBatches.attachedResumeId })
+    .from(sendBatches)
+    .where(eq(sendBatches.id, rec.batchId))
+    .limit(1);
+
+  let attachment: OutgoingMessage["attachment"];
+  let resolvedResumeId: string | null = null;
+  let attachmentDropped = false;
+  if (originalBatch?.attachedResumeId) {
+    try {
+      const file = await getResumeFile(userId, originalBatch.attachedResumeId, { db, storage: opts.storage });
+      attachment = { fileName: file.fileName, contentType: "application/pdf", content: await streamToBuffer(file.body) };
+      resolvedResumeId = originalBatch.attachedResumeId;
+    } catch {
+      attachmentDropped = true;
+    }
+  }
+
   const [batch] = await db
     .insert(sendBatches)
-    .values({ userId, connectedAccountId: account.row.id, templateId: null, kind: "single", total: 1, status: "in_progress" })
+    .values({ userId, connectedAccountId: account.row.id, templateId: null, attachedResumeId: resolvedResumeId, kind: "single", total: 1, status: "in_progress" })
     .returning();
   const batchId = batch!.id;
 
@@ -248,6 +320,7 @@ export async function resendRecord(
       subject: rec.subject,
       bodyHtml: rec.bodyHtml,
       bodyText: rec.bodyText,
+      attachment,
     },
     account.credentials,
   );
@@ -282,5 +355,5 @@ export async function resendRecord(
     .set({ sentCount: status === "sent" ? 1 : 0, failedCount: status === "failed" ? 1 : 0, status: "completed", updatedAt: new Date() })
     .where(eq(sendBatches.id, batchId));
 
-  return { recordId: newRec!.id, status, reason };
+  return { recordId: newRec!.id, status, reason, attachmentDropped };
 }

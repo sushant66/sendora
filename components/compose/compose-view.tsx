@@ -25,6 +25,7 @@ import type { AccountStatus } from "@/lib/email/types";
 import type { SendResultItem, SendSummary } from "@/lib/send/types";
 import { MAX_SEND_RECIPIENTS } from "@/lib/validation/send";
 import type { RecontactInfo } from "@/lib/history/types";
+import type { Resume } from "@/lib/resumes/types";
 import type { SenderProfile } from "@/lib/profile/types";
 import { computeMissingValues, type MissingValueReport } from "@/lib/compose/missing-values";
 import { MERGE_FIELD_BY_TOKEN } from "@/lib/templates/fields";
@@ -43,6 +44,7 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
   const toast = useToast();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [resumes, setResumes] = useState<Resume[]>([]);
   const [account, setAccount] = useState<AccountStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -50,6 +52,7 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
   const subjectRef = useRef<HTMLElement | null>(null);
   const [previewFor, setPreviewFor] = useState<string>("");
   const [templateId, setTemplateId] = useState("");
+  const [resumeId, setResumeId] = useState("");
   const [subject, setSubject] = useState("");
   const [bodyHtml, setBodyHtml] = useState("");
 
@@ -64,18 +67,31 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
   // Quick "email a recruiter you just got" flow: add a recipient inline without a detour to Contacts.
   const [addOpen, setAddOpen] = useState(false);
 
+  // Re-fetch the resume list (e.g. after a send finds the selected one is gone) so a
+  // since-deleted resume doesn't linger as a selectable option in the picker.
+  async function refreshResumes() {
+    try {
+      const r = await apiRequest<{ items: Resume[] }>("/api/resumes");
+      setResumes(r.items);
+    } catch {
+      /* keep the stale list rather than clearing it on a transient fetch failure */
+    }
+  }
+
   useEffect(() => {
     (async () => {
       try {
-        const [c, t, a, p] = await Promise.all([
+        const [c, t, a, r, p] = await Promise.all([
           apiRequest<ContactList>("/api/contacts?all=1"),
           apiRequest<{ items: Template[] }>("/api/templates"),
           apiRequest<AccountStatus>("/api/email-account"),
+          apiRequest<{ items: Resume[] }>("/api/resumes"),
           apiRequest<SenderProfile>("/api/profile"),
         ]);
         setContacts(c.items);
         setTemplates(t.items);
         setAccount(a);
+        setResumes(r.items);
         setProfile(p);
 
         // Pick up a batch handed off from the import screen and pre-fill the recipients, so the
@@ -132,6 +148,7 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
   const previewContactId = contactIds.includes(previewFor) ? previewFor : contactIds[0] ?? "";
   const previewContact = contactsById.get(previewContactId);
   const hasContent = subject.trim().length > 0 && bodyHtml.replace(/<[^>]*>/g, "").trim().length > 0;
+  const attachedResume = resumes.find((r) => r.id === resumeId) ?? null;
 
   // Guards against out-of-order preview responses clobbering a newer request.
   const previewSeq = useRef(0);
@@ -219,6 +236,7 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
         json: {
           contactId: previewContactId || undefined,
           templateId: templateId || undefined,
+          resumeId: resumeId || undefined,
           override: { subject, bodyHtml },
         },
       });
@@ -228,6 +246,14 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
       if (err instanceof ApiError && err.body.error === "no_active_account") {
         setAccount({ connected: false });
         toast({ body: "Connect your Gmail to send a test.", type: "error" });
+      } else if (err instanceof ApiError && err.body.error === "resume_unavailable") {
+        setResumeId("");
+        void refreshResumes();
+        toast({ body: "That resume is no longer available. Pick another.", type: "error" });
+      } else if (err instanceof ApiError && err.status === 404) {
+        setResumeId("");
+        void refreshResumes();
+        toast({ body: "That resume could not be found. Pick another.", type: "error" });
       } else if (err instanceof ApiError && err.status === 422) {
         const fieldMsg = err.body.fields ? Object.values(err.body.fields)[0] : undefined;
         toast({ body: fieldMsg ?? "Add a subject and body first.", type: "error" });
@@ -246,7 +272,7 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
     try {
       const summary = await apiRequest<SendSummary>("/api/send", {
         method: "POST",
-        json: { contactIds, templateId: templateId || undefined, override: { subject, bodyHtml } },
+        json: { contactIds, templateId: templateId || undefined, override: { subject, bodyHtml }, resumeId: resumeId || undefined },
       });
       setResult(summary);
       if (summary.failed === 0) toast({ body: `Sent to ${summary.sent} recruiter${summary.sent === 1 ? "" : "s"}.` });
@@ -256,6 +282,14 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
       if (err instanceof ApiError && err.body.error === "no_active_account") {
         setAccount({ connected: false });
         toast({ body: "Connect your Gmail before sending.", type: "error" });
+      } else if (err instanceof ApiError && err.body.error === "resume_unavailable") {
+        setResumeId("");
+        void refreshResumes();
+        toast({ body: "That resume is no longer available. Pick another.", type: "error" });
+      } else if (err instanceof ApiError && err.status === 404) {
+        setResumeId("");
+        void refreshResumes();
+        toast({ body: "That resume could not be found. Pick another.", type: "error" });
       } else if (err instanceof ApiError && err.status === 422) {
         const fieldMsg = err.body.fields ? Object.values(err.body.fields)[0] : undefined;
         toast({ body: fieldMsg ?? "Add recipients, a subject, and a body before sending.", type: "error" });
@@ -384,6 +418,15 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
             value={templateId}
             onChange={onTemplate}
           />
+          <Selector
+            label="Resume"
+            hasSearch
+            hasClear
+            placeholder="No attachment (optional)"
+            options={resumes.map((r) => ({ value: r.id, label: `${r.label} (${r.fileName})` }))}
+            value={resumeId || null}
+            onChange={(v) => setResumeId(v ?? "")}
+          />
           <VStack gap={1} align="stretch">
             <HStack justify="between" align="center">
               <Text size="sm" weight="medium">Subject</Text>
@@ -462,6 +505,7 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
             fromEmail={account?.emailAddress}
             toEmail={previewContact?.email}
             isEmpty={contactIds.length === 0 || !hasContent}
+            attachedResume={attachedResume ? { label: attachedResume.label, fileName: attachedResume.fileName } : null}
             canCopy
           />
         </VStack>

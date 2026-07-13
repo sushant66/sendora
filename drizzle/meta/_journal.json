@@ -43,6 +43,13 @@
       "when": 1783844372712,
       "tag": "0005_cute_shatterstar",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1783864574541,
+      "tag": "0006_mature_strong_guy",
+      "breakpoints": true
     }
   ]
 }

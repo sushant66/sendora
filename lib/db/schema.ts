@@ -209,6 +209,9 @@ export const sendBatches = pgTable(
       .notNull()
       .references(() => connectedEmailAccounts.id, { onDelete: "cascade" }),
     templateId: text("template_id").references(() => emailTemplates.id, { onDelete: "set null" }),
+    // 003-resume-attachments: which resume (if any) was attached to every send in this
+    // batch. Nullable, onDelete: set null — mirrors templateId exactly (see data-model.md).
+    attachedResumeId: text("attached_resume_id").references(() => resumes.id, { onDelete: "set null" }),
     kind: text("kind").notNull(), // single | bulk
     total: integer("total").notNull().default(0),
     sentCount: integer("sent_count").notNull().default(0),
@@ -259,3 +262,39 @@ export const sendRecords = pgTable(
   ],
 );
 export type SendRecordRow = typeof sendRecords.$inferSelect;
+
+/**
+ * Resume (002-resume-storage) — a labeled PDF resume variant. `deleted_at` null means
+ * active; a set `deleted_at` means archived history (US3/US4). `version` is monotonic per
+ * `(user_id, label)` and never reused, even across a full archive-then-reupload cycle.
+ * See specs/002-resume-storage/data-model.md.
+ */
+export const resumes = pgTable(
+  "resume",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    label: text("label").notNull(),
+    version: integer("version").notNull(),
+    fileName: text("file_name").notNull(),
+    storageKey: text("storage_key").notNull(),
+    fileSize: integer("file_size").notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // At most one active resume per label per user (FR-005); an archived row never
+    // blocks reuse of its label.
+    uniqueIndex("resume_user_active_label_idx")
+      .on(t.userId, t.label)
+      .where(sql`${t.deletedAt} is null`),
+    uniqueIndex("resume_user_label_version_idx").on(t.userId, t.label, t.version),
+    index("resume_user_label_idx").on(t.userId, t.label),
+  ],
+);
+export type ResumeRow = typeof resumes.$inferSelect;

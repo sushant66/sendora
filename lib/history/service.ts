@@ -1,7 +1,8 @@
 import { and, asc, desc, eq, inArray, isNotNull, max, sql } from "drizzle-orm";
 import { db as defaultDb, type Db } from "@/lib/db/client";
-import { connectedEmailAccounts, recruiterContacts, sendBatches, sendRecords } from "@/lib/db/schema";
+import { connectedEmailAccounts, recruiterContacts, resumes, sendBatches, sendRecords } from "@/lib/db/schema";
 import type {
+  AttachedResumeInfo,
   HistoryBatchRecords,
   HistoryDetail,
   HistoryEvent,
@@ -96,6 +97,7 @@ export async function listHistory(
       total: sendBatches.total,
       sent: sendBatches.sentCount,
       failed: sendBatches.failedCount,
+      attachedResumeId: sendBatches.attachedResumeId,
     })
     .from(sendBatches)
     .where(and(...filters))
@@ -120,6 +122,20 @@ export async function listHistory(
     }
   }
 
+  // 003-resume-attachments: resolve which resume (label + fileName) each batch attached,
+  // if any. Tolerates the join coming back empty (treated as no attachment shown), the
+  // same way a deleted contact's name is already tolerated above, even though resumes are
+  // never hard-deleted today (FR-007/FR-008).
+  const resumeIds = [...new Set(page.map((b) => b.attachedResumeId).filter((id): id is string => id !== null))];
+  const resumeById = new Map<string, AttachedResumeInfo>();
+  if (resumeIds.length > 0) {
+    const resumeRows = await db
+      .select({ id: resumes.id, label: resumes.label, fileName: resumes.fileName })
+      .from(resumes)
+      .where(and(eq(resumes.userId, userId), inArray(resumes.id, resumeIds)));
+    for (const r of resumeRows) resumeById.set(r.id, { id: r.id, label: r.label, fileName: r.fileName });
+  }
+
   const items: HistoryEvent[] = page.map((b) => ({
     id: b.id,
     kind: b.kind as "single" | "bulk",
@@ -128,6 +144,7 @@ export async function listHistory(
     sent: b.sent,
     failed: b.failed,
     record: b.kind === "single" ? recordByBatch.get(b.id) ?? null : null,
+    attachedResume: b.attachedResumeId ? resumeById.get(b.attachedResumeId) ?? null : null,
   }));
 
   return {
@@ -168,11 +185,15 @@ export async function getHistoryDetail(
       batchTotal: sendBatches.total,
       batchSent: sendBatches.sentCount,
       batchFailed: sendBatches.failedCount,
+      resumeId: resumes.id,
+      resumeLabel: resumes.label,
+      resumeFileName: resumes.fileName,
     })
     .from(sendRecords)
     .leftJoin(recruiterContacts, eq(sendRecords.contactId, recruiterContacts.id))
     .innerJoin(sendBatches, eq(sendRecords.batchId, sendBatches.id))
     .leftJoin(connectedEmailAccounts, eq(sendBatches.connectedAccountId, connectedEmailAccounts.id))
+    .leftJoin(resumes, and(eq(sendBatches.attachedResumeId, resumes.id), eq(resumes.userId, userId)))
     .where(and(eq(sendRecords.userId, userId), eq(sendRecords.id, recordId)))
     .limit(1);
 
@@ -190,6 +211,11 @@ export async function getHistoryDetail(
       sent: row.batchSent,
       failed: row.batchFailed,
     },
+    // Tolerates the join coming back empty, same reasoning as listHistory above.
+    attachedResume:
+      row.resumeId !== null && row.resumeLabel !== null && row.resumeFileName !== null
+        ? { id: row.resumeId, label: row.resumeLabel, fileName: row.resumeFileName }
+        : null,
   };
 }
 

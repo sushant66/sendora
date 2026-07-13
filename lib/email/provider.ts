@@ -16,6 +16,12 @@ export interface OutgoingMessage {
   subject: string; // already merge-resolved, no literal {{token}} (SC-004)
   bodyHtml: string; // sanitized rich-text HTML
   bodyText: string; // plain-text alternative (multipart/alternative)
+  /** 003-resume-attachments: identical for every recipient in a batch (FR-003/FR-004). */
+  attachment?: {
+    fileName: string;
+    contentType: "application/pdf"; // only PDFs are in scope (spec: out of scope for other types)
+    content: Buffer;
+  };
 }
 
 export interface ProviderCredentials {

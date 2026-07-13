@@ -23,6 +23,7 @@ export function EmailPreview({
   fromEmail,
   toEmail,
   isEmpty,
+  attachedResume,
   hideWarnings = false,
   canCopy = false,
 }: {
@@ -30,6 +31,8 @@ export function EmailPreview({
   fromEmail?: string;
   toEmail?: string;
   isEmpty: boolean;
+  /** The resume (if any) that will be attached to this send (003-resume-attachments). */
+  attachedResume?: { label: string; fileName: string } | null;
   /** Suppress the per-recipient warning banner when a caller already summarizes them
    *  (e.g. the pre-send gate shows one summary above this preview). */
   hideWarnings?: boolean;
@@ -104,6 +107,11 @@ export function EmailPreview({
             <VStack gap={1} align="stretch">
               {fromEmail && <Text size="sm" color="secondary">From: {fromEmail}</Text>}
               {toEmail && <Text size="sm" color="secondary">To: {toEmail}</Text>}
+              {attachedResume && (
+                <Text size="sm" color="secondary">
+                  Attachment: {attachedResume.label} ({attachedResume.fileName})
+                </Text>
+              )}
               <Heading level={3}>{preview.subject || "(no subject)"}</Heading>
             </VStack>
             <Divider />
