@@ -149,7 +149,22 @@ export function HistoryDetailDrawer({
                 <MetaRow label="To" value={detail.recipientName ? `${detail.recipientName} · ${detail.recipientEmail}` : detail.recipientEmail} />
                 <MetaRow label="From" value={detail.fromEmail || "your connected inbox"} />
                 {detail.attachedResume && (
-                  <MetaRow label="Attached" value={`${detail.attachedResume.label} (${detail.attachedResume.fileName})`} />
+                  <HStack gap={2} align="center" wrap="wrap">
+                    <Text size="sm" color="secondary" style={{ minWidth: "3.5ch" }}>
+                      Attached
+                    </Text>
+                    {/* The exact file this recipient received — retained even after the shelf
+                        moved on, so it opens the precise PDF that went out. */}
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={<Icon icon="externalLink" size="xsm" />}
+                      label={`${detail.attachedResume.label} (${detail.attachedResume.fileName})`}
+                      onClick={() =>
+                        window.open(`/api/resumes/${detail.attachedResume!.id}`, "_blank", "noopener,noreferrer")
+                      }
+                    />
+                  </HStack>
                 )}
               </VStack>
 

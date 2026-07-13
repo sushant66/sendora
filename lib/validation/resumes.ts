@@ -17,10 +17,34 @@ export const ResumeLabelSchema = z
   .min(1, "a label is required")
   .max(150, "label must be 150 characters or fewer");
 
+/** Characters unsafe in a file name: path separators, quotes, and ASCII control characters. */
+const UNSAFE_FILENAME_CHARS = /[/\\\x00-\x1f<>:"|?*]/g;
+
+/** Fallback used when a source file name is empty or all-unsafe after stripping. */
+const DEFAULT_FILE_NAME = "resume.pdf";
+
+/**
+ * Strip characters that are unsafe in a file name and would break the MIME
+ * `Content-Disposition`/`Content-Type` headers (and the download route's HTTP header) this
+ * name is later interpolated into, then guarantee a `.pdf` extension. Returns `undefined`
+ * when nothing usable survives, so callers can fall back deliberately.
+ */
+export function sanitizeFileName(raw: string | undefined): string | undefined {
+  const trimmed = raw?.trim();
+  if (!trimmed) return undefined;
+  const stripped = trimmed.replace(UNSAFE_FILENAME_CHARS, "").trim();
+  if (!stripped) return undefined;
+  return /\.pdf$/i.test(stripped) ? stripped : `${stripped}.pdf`;
+}
+
 /** Normalized file metadata the route handler builds from the multipart upload. */
 export const ResumeFileSchema = z
   .object({
-    name: z.string(),
+    // The uploaded file's own name is attacker-controlled and is the fallback display name
+    // when no custom `fileName` is given, so sanitize it here at the trust boundary: it is
+    // interpolated unescaped into MIME/HTTP headers downstream and must never carry a quote,
+    // control char, or separator (matches how the custom `fileName` is already treated).
+    name: z.string().transform((n) => sanitizeFileName(n) ?? DEFAULT_FILE_NAME),
     type: z.string(),
     size: z.number(),
     buffer: z.instanceof(Buffer),
@@ -34,24 +58,15 @@ export const ResumeFileSchema = z
   });
 export type ResumeFile = z.infer<typeof ResumeFileSchema>;
 
-/** Characters unsafe in a file name: path separators and ASCII control characters. */
-const UNSAFE_FILENAME_CHARS = /[/\\\x00-\x1f<>:"|?*]/g;
-
 /**
  * An optional custom file name (003-resume-attachments, research.md §7). Never rejects:
  * omitted, empty, whitespace-only, or unusable-after-stripping input all resolve to
- * `undefined`, so the caller falls back to the source file's own name (`?? file.name`).
+ * `undefined`, so the caller falls back to the (already sanitized) source file's own name.
  */
 export const ResumeFileNameSchema = z
   .string()
   .optional()
-  .transform((raw): string | undefined => {
-    const trimmed = raw?.trim();
-    if (!trimmed) return undefined;
-    const stripped = trimmed.replace(UNSAFE_FILENAME_CHARS, "").trim();
-    if (!stripped) return undefined;
-    return /\.pdf$/i.test(stripped) ? stripped : `${stripped}.pdf`;
-  });
+  .transform((raw) => sanitizeFileName(raw));
 
 export const ResumeUploadSchema = z.object({
   label: ResumeLabelSchema,

@@ -42,10 +42,10 @@ test.describe("US2 — browse and open saved resumes", () => {
     await page.getByRole("button", { name: "Upload" }).click();
     await expect(page.getByText("DevOps")).toBeVisible();
 
-    await page.getByRole("row", { name: /DevOps/ }).getByRole("button", { name: /actions|more/i }).click();
+    await page.getByRole("button", { name: /More actions for DevOps/i }).click();
     const [popup] = await Promise.all([
       context.waitForEvent("page"),
-      page.getByRole("menuitem", { name: "Open" }).click(),
+      page.getByRole("menuitem", { name: "Open in new tab" }).click(),
     ]);
     await popup.waitForLoadState();
     expect(popup.url()).toContain("/api/resumes/");

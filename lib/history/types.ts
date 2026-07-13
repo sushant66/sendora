@@ -23,8 +23,12 @@ export type HistoryRecord = {
  * `record` so the row renders and opens directly); a bulk send is many individual
  * emails (its per-recipient records are fetched on expand).
  */
-/** The resume (if any) attached to a batch's send(s) — 003-resume-attachments. */
-export type AttachedResumeInfo = { label: string; fileName: string };
+/**
+ * The resume (if any) attached to a batch's send(s) — 003-resume-attachments. `id` points
+ * at the exact resume row that went out (retained even after the shelf moves on), so the
+ * detail drawer can open the precise file this recipient received.
+ */
+export type AttachedResumeInfo = { id: string; label: string; fileName: string };
 
 export type HistoryEvent = {
   id: string; // batchId

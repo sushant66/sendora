@@ -34,6 +34,17 @@ function bucket(): string {
   return getEnv().R2_BUCKET_NAME;
 }
 
+/**
+ * Whether an S3/R2 error means "object does not exist." `instanceof NoSuchKey` alone is
+ * fragile: R2 is S3-compatible but not identical, and the SDK's error-class identity can be
+ * lost under bundling, so also match the error name and a 404 status. Exported for testing.
+ */
+export function isNotFoundError(err: unknown): boolean {
+  if (err instanceof NoSuchKey) return true;
+  const e = err as { name?: string; $metadata?: { httpStatusCode?: number } } | null;
+  return e?.name === "NoSuchKey" || e?.$metadata?.httpStatusCode === 404;
+}
+
 export async function uploadObject(key: string, body: Buffer, contentType: string): Promise<void> {
   await r2().send(
     new PutObjectCommand({ Bucket: bucket(), Key: key, Body: body, ContentType: contentType }),
@@ -50,7 +61,7 @@ export async function getObjectStream(key: string): Promise<StoredObject | null>
       contentLength: result.ContentLength,
     };
   } catch (err) {
-    if (err instanceof NoSuchKey) return null;
+    if (isNotFoundError(err)) return null;
     throw err;
   }
 }

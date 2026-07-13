@@ -22,3 +22,28 @@ export const db: NeonHttpDatabase<typeof schema> = isNeon
   : (drizzlePg(new Pool({ connectionString: url }), { schema }) as unknown as NeonHttpDatabase<typeof schema>);
 
 export type Db = typeof db;
+
+/**
+ * Run several write statements atomically across both drivers this project targets. The
+ * two drivers have inverse capabilities: Neon's HTTP driver has no `db.transaction()` but
+ * exposes `db.batch(...)`; node-postgres (local dev) has no `.batch()` but supports real
+ * transactions. `build(x)` MUST construct its statements from the passed executor `x` so
+ * they run on the right connection (a statement built from the top-level `db` would not
+ * join the node-postgres transaction). Statements run in array order.
+ */
+export async function runAtomic(
+  database: Db,
+  build: (x: Db) => Array<PromiseLike<unknown>>,
+): Promise<void> {
+  const driver = database as unknown as {
+    batch?: (stmts: Array<PromiseLike<unknown>>) => Promise<unknown>;
+    transaction: (fn: (tx: Db) => Promise<void>) => Promise<void>;
+  };
+  if (typeof driver.batch === "function") {
+    await driver.batch(build(database));
+  } else {
+    await driver.transaction(async (tx) => {
+      for (const stmt of build(tx)) await stmt;
+    });
+  }
+}

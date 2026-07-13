@@ -25,7 +25,7 @@ test.describe("US3 — remove a resume no longer needed", () => {
       await expect(page.getByText(label)).toBeVisible();
     }
 
-    await page.getByRole("row", { name: /DevOps/ }).getByRole("button", { name: /actions|more/i }).click();
+    await page.getByRole("button", { name: /More actions for DevOps/i }).click();
     await page.getByRole("menuitem", { name: "Delete" }).click();
     await page.getByRole("button", { name: "Delete" }).click();
 
@@ -40,7 +40,7 @@ test.describe("US3 — remove a resume no longer needed", () => {
     await page.getByRole("button", { name: "Upload" }).click();
     await expect(page.getByText("Backend Engineer")).toBeVisible();
 
-    await page.getByRole("row", { name: /Backend Engineer/ }).getByRole("button", { name: /actions|more/i }).click();
+    await page.getByRole("button", { name: /More actions for Backend Engineer/i }).click();
     await page.getByRole("menuitem", { name: "Delete" }).click();
     await page.getByRole("button", { name: "Delete" }).click();
     await expect(page.getByText("Backend Engineer")).not.toBeVisible();

@@ -236,6 +236,7 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
         json: {
           contactId: previewContactId || undefined,
           templateId: templateId || undefined,
+          resumeId: resumeId || undefined,
           override: { subject, bodyHtml },
         },
       });
@@ -245,6 +246,14 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
       if (err instanceof ApiError && err.body.error === "no_active_account") {
         setAccount({ connected: false });
         toast({ body: "Connect your Gmail to send a test.", type: "error" });
+      } else if (err instanceof ApiError && err.body.error === "resume_unavailable") {
+        setResumeId("");
+        void refreshResumes();
+        toast({ body: "That resume is no longer available. Pick another.", type: "error" });
+      } else if (err instanceof ApiError && err.status === 404) {
+        setResumeId("");
+        void refreshResumes();
+        toast({ body: "That resume could not be found. Pick another.", type: "error" });
       } else if (err instanceof ApiError && err.status === 422) {
         const fieldMsg = err.body.fields ? Object.values(err.body.fields)[0] : undefined;
         toast({ body: fieldMsg ?? "Add a subject and body first.", type: "error" });
@@ -277,8 +286,6 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
         setResumeId("");
         void refreshResumes();
         toast({ body: "That resume is no longer available. Pick another.", type: "error" });
-      } else if (err instanceof ApiError && err.body.error === "attachment_too_large") {
-        toast({ body: "That resume is too large to attach to this email. Try a smaller file.", type: "error" });
       } else if (err instanceof ApiError && err.status === 404) {
         setResumeId("");
         void refreshResumes();

@@ -10,11 +10,12 @@ import { HStack } from "@astryxdesign/core/HStack";
 import { ApiError, apiRequest } from "@/lib/api/client";
 import type { Resume } from "@/lib/resumes/types";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB (FR-003)
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
-}
+// Guard the size in the browser BEFORE reading/POSTing the file so an oversized PDF fails
+// fast with a clear message instead of being buffered into memory and rejected on a
+// round-trip (mirrors the CSV import flow). The server re-validates as the authoritative
+// trust boundary (FR-003).
+const MAX_FILE_MB = 10;
+const MAX_FILE_SIZE = MAX_FILE_MB * 1024 * 1024;
 
 export function UploadResumeDialog({
   isOpen,
@@ -32,7 +33,7 @@ export function UploadResumeDialog({
     <Dialog isOpen={isOpen} onOpenChange={onOpenChange} purpose="form" width={440}>
       <DialogHeader
         title={replacing ? "Update resume" : "Upload resume"}
-        subtitle={replacing ? `Updating "${replacing.fileName}" (uploaded ${formatDate(replacing.createdAt)})` : undefined}
+        subtitle={replacing ? `Replace the file for "${replacing.label}" with a new PDF.` : undefined}
       />
       {/* Keyed so reopening the dialog (or switching target) remounts with fresh state. */}
       <UploadForm
@@ -121,13 +122,20 @@ function UploadForm({
           label="Resume PDF"
           mode="dropzone"
           accept="application/pdf,.pdf"
-          maxSize={MAX_FILE_SIZE}
           value={file}
           onChange={(f) => {
-            setFile(Array.isArray(f) ? (f[0] ?? null) : f);
+            const next = Array.isArray(f) ? (f[0] ?? null) : f;
+            if (next && next.size > MAX_FILE_SIZE) {
+              setFile(null);
+              setFileError(
+                `That file is ${(next.size / (1024 * 1024)).toFixed(1)} MB. Resumes must be under ${MAX_FILE_MB} MB. Try compressing the PDF or exporting a smaller one.`,
+              );
+              return;
+            }
+            setFile(next);
             if (fileError) setFileError(undefined);
           }}
-          description="PDF, up to 10MB."
+          description={`PDF, up to ${MAX_FILE_MB}MB.`}
           isRequired
           status={fileError ? { type: "error", message: fileError } : undefined}
         />

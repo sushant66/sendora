@@ -100,3 +100,48 @@ export const ProfileIcon: Glyph = (props) => (
     <path d="M5.5 19.5a6.5 6.5 0 0 1 13 0" />
   </svg>
 );
+
+/** A single document/page with a folded corner: the shelf's per-resume glyph. */
+export const FileIcon: Glyph = (props) => (
+  <svg {...base(props)}>
+    <path d="M7 3.5h7L18 7.5V19a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z" />
+    <path d="M13.5 3.5V8H18" />
+    <path d="M9 13h6M9 16h4" />
+  </svg>
+);
+
+/** Eye: preview / view the file inline. */
+export const PreviewIcon: Glyph = (props) => (
+  <svg {...base(props)}>
+    <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+/** Arrow into a tray: download the file to disk. */
+export const DownloadIcon: Glyph = (props) => (
+  <svg {...base(props)}>
+    <path d="M12 4v10" />
+    <path d="m8 11 4 4 4-4" />
+    <path d="M5 19.5h14" />
+  </svg>
+);
+
+/** Circular arrows: replace the current file with a new upload ("update"). */
+export const ReplaceIcon: Glyph = (props) => (
+  <svg {...base(props)}>
+    <path d="M4.5 12a7.5 7.5 0 0 1 12.9-5.2L20 9.5" />
+    <path d="M20 4.5v5h-5" />
+    <path d="M19.5 12a7.5 7.5 0 0 1-12.9 5.2L4 14.5" />
+    <path d="M4 19.5v-5h5" />
+  </svg>
+);
+
+/** Trash: delete the resume. */
+export const TrashIcon: Glyph = (props) => (
+  <svg {...base(props)}>
+    <path d="M5 7h14" />
+    <path d="M9 7V5.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7" />
+    <path d="M6.5 7l.8 12a1 1 0 0 0 1 .95h7.4a1 1 0 0 0 1-.95L18 7" />
+  </svg>
+);

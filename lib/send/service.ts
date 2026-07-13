@@ -11,7 +11,6 @@ import { senderContextFromProfile } from "@/lib/profile/context";
 import { getActiveAccount, markAccountExpired } from "@/lib/email/account-service";
 import { resolveProvider } from "@/lib/email/factory";
 import { REAUTH_REQUIRED, type EmailProvider, type OutgoingMessage, type ProviderCredentials } from "@/lib/email/provider";
-import { rawMessageByteLength, MAX_RAW_MESSAGE_BYTES } from "@/lib/email/mime";
 import { getResumeFile } from "@/lib/resumes/service";
 import type { ResumeStorage } from "@/lib/storage/types";
 import type { SendResultItem, SendSummary } from "./types";
@@ -59,7 +58,7 @@ export async function streamToBuffer(stream: ReadableStream<Uint8Array>): Promis
  * fresh send, not a resend) that it's still active (research.md §4). Throws NotFoundError
  * if unowned/unknown; ConflictError("resume_unavailable") if it exists but is archived.
  */
-async function resolveAttachment(
+export async function resolveAttachment(
   userId: string,
   resumeId: string,
   db: Db,
@@ -188,23 +187,10 @@ export async function sendEmails(
   const sender = senderContextFromProfile(profile, fromName);
 
   // 003-resume-attachments: resolve + validate the optional attachment once per batch,
-  // before any recipient is contacted (FR-001/FR-005/FR-006).
+  // before any recipient is contacted (FR-001/FR-005/FR-006). Message size stays under
+  // Gmail's limit structurally: the upload path caps resumes at 10MB (FR-003), so the
+  // base64-encoded message can't approach the ~25MB ceiling (FR-011) at send time.
   const attachment = request.resumeId ? await resolveAttachment(userId, request.resumeId, db, opts.storage) : undefined;
-  if (attachment && recipients.length > 0) {
-    const sample = renderTemplate(base, { contact: { name: recipients[0]!.name, company: recipients[0]!.company, role: recipients[0]!.role }, sender });
-    const sampleMessage: OutgoingMessage = {
-      fromEmail: account.row.emailAddress,
-      fromName: fromName ?? undefined,
-      to: recipients[0]!.email,
-      subject: sample.subject,
-      bodyHtml: sample.bodyHtml,
-      bodyText: sample.bodyText,
-      attachment,
-    };
-    // The attachment dominates message size; per-recipient body variance is negligible,
-    // so checking one representative recipient is sufficient (research.md §6).
-    if (rawMessageByteLength(sampleMessage) > MAX_RAW_MESSAGE_BYTES) throw new ConflictError("attachment_too_large");
-  }
 
   const kind = recipients.length > 1 ? "bulk" : "single";
   const [batch] = await db

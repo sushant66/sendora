@@ -96,11 +96,4 @@ describe("POST /api/send (single)", () => {
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ error: "resume_unavailable" });
   });
-
-  it("409 attachment_too_large when the attached resume would push the message over the size limit", async () => {
-    vi.mocked(sendEmails).mockRejectedValue(new ConflictError("attachment_too_large"));
-    const res = await SEND(jsonRequest("/api/send", { contactIds: ["c1"], templateId: "t1", resumeId: "r1" }));
-    expect(res.status).toBe(409);
-    expect(await res.json()).toEqual({ error: "attachment_too_large" });
-  });
 });

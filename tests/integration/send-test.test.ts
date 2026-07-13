@@ -12,10 +12,12 @@ import { makeProfile } from "@/tests/factories/profile";
 vi.mock("@/lib/email/account-service", () => ({ getActiveAccount: vi.fn() }));
 vi.mock("@/lib/templates/preview", () => ({ resolveContent: vi.fn() }));
 vi.mock("@/lib/profile/service", () => ({ getProfile: vi.fn() }));
+vi.mock("@/lib/send/service", () => ({ resolveAttachment: vi.fn() }));
 
 import { getActiveAccount } from "@/lib/email/account-service";
 import { resolveContent } from "@/lib/templates/preview";
 import { getProfile } from "@/lib/profile/service";
+import { resolveAttachment } from "@/lib/send/service";
 import { sendTestEmail } from "@/lib/send/test-send";
 
 const ACCOUNT = {
@@ -57,6 +59,34 @@ describe("sendTestEmail", () => {
     expect(sent.subject).toMatch(/test/i);
     expect(sent.subject).toContain("Ada Lovelace");
     expect(sent.subject).not.toMatch(/\{\{/);
+  });
+
+  it("attaches the selected resume so a test mirrors the real send (003-resume-attachments)", async () => {
+    const provider = new FakeEmailProvider();
+    const attachment = { fileName: "Ada - Backend.pdf", contentType: "application/pdf" as const, content: Buffer.from("%PDF-1.7") };
+    vi.mocked(resolveAttachment).mockResolvedValue(attachment);
+
+    await sendTestEmail(
+      "u1",
+      { override: { subject: "Hi {{first_name}}", bodyHtml: "<p>Hi</p>" }, resumeId: "r1" },
+      "Ada",
+      { provider, db: { insert: vi.fn() } as any },
+    );
+
+    expect(resolveAttachment).toHaveBeenCalledWith("u1", "r1", expect.anything(), undefined);
+    expect(provider.sent[0]!.message.attachment).toEqual(attachment);
+  });
+
+  it("sends no attachment when no resume is selected", async () => {
+    const provider = new FakeEmailProvider();
+    await sendTestEmail(
+      "u1",
+      { override: { subject: "Hi", bodyHtml: "<p>Hi</p>" } },
+      "Ada",
+      { provider, db: { insert: vi.fn() } as any },
+    );
+    expect(resolveAttachment).not.toHaveBeenCalled();
+    expect(provider.sent[0]!.message.attachment).toBeUndefined();
   });
 
   it("returns a failure reason when the provider rejects (still no records)", async () => {

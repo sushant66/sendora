@@ -53,6 +53,7 @@ export const TestSendRequestSchema = z
   .object({
     contactId: z.string().min(1).optional(),
     templateId: z.string().min(1).optional(),
+    resumeId: z.string().min(1).optional(),
     override: z
       .object({
         subject: z.string().trim().min(1, "Add a subject and body first."),

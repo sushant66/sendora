@@ -21,7 +21,6 @@ vi.mock("@/lib/resumes/service", () => ({
   listResumes: vi.fn(),
   getResumeFile: vi.fn(),
   deleteResume: vi.fn(),
-  restoreResume: vi.fn(),
 }));
 vi.mock("@/lib/auth/session", () => ({ requireUser: vi.fn(), getCurrentUser: vi.fn() }));
 
@@ -49,7 +48,7 @@ beforeEach(() => {
 
 describe("POST /api/resumes", () => {
   it("uploads a resume → 201", async () => {
-    const resume = { id: "r1", label: "Backend Engineer", version: 1, fileName: "resume.pdf", fileSize: PDF_BYTES.byteLength, status: "active" as const, createdAt: "2026-07-11T00:00:00.000Z" };
+    const resume = { id: "r1", label: "Backend Engineer", version: 1, fileName: "resume.pdf", fileSize: PDF_BYTES.byteLength, status: "active" as const, createdAt: "2026-07-11T00:00:00.000Z", updatedAt: "2026-07-11T00:00:00.000Z" };
     vi.mocked(service.uploadResume).mockResolvedValue(resume);
 
     const res = await POST(uploadRequest({ label: "Backend Engineer", file: { name: "resume.pdf", type: "application/pdf", bytes: PDF_BYTES } }));
@@ -97,7 +96,7 @@ describe("POST /api/resumes", () => {
   });
 
   it("passes an optional custom fileName through to uploadResume, normalized (003-resume-attachments)", async () => {
-    const resume = { id: "r1", label: "Backend Engineer", version: 1, fileName: "My Resume.pdf", fileSize: PDF_BYTES.byteLength, status: "active" as const, createdAt: "2026-07-11T00:00:00.000Z" };
+    const resume = { id: "r1", label: "Backend Engineer", version: 1, fileName: "My Resume.pdf", fileSize: PDF_BYTES.byteLength, status: "active" as const, createdAt: "2026-07-11T00:00:00.000Z", updatedAt: "2026-07-11T00:00:00.000Z" };
     vi.mocked(service.uploadResume).mockResolvedValue(resume);
 
     const res = await POST(
@@ -108,7 +107,7 @@ describe("POST /api/resumes", () => {
   });
 
   it("omitting fileName never causes a validation error (falls back to the source file's name)", async () => {
-    const resume = { id: "r1", label: "Backend Engineer", version: 1, fileName: "resume.pdf", fileSize: PDF_BYTES.byteLength, status: "active" as const, createdAt: "2026-07-11T00:00:00.000Z" };
+    const resume = { id: "r1", label: "Backend Engineer", version: 1, fileName: "resume.pdf", fileSize: PDF_BYTES.byteLength, status: "active" as const, createdAt: "2026-07-11T00:00:00.000Z", updatedAt: "2026-07-11T00:00:00.000Z" };
     vi.mocked(service.uploadResume).mockResolvedValue(resume);
 
     const res = await POST(uploadRequest({ label: "Backend Engineer", file: { name: "resume.pdf", type: "application/pdf", bytes: PDF_BYTES } }));

@@ -1,6 +1,6 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
-import { db as defaultDb, type Db } from "@/lib/db/client";
-import { resumes, type ResumeRow } from "@/lib/db/schema";
+import { db as defaultDb, runAtomic, type Db } from "@/lib/db/client";
+import { resumes, sendBatches, type ResumeRow } from "@/lib/db/schema";
 import { ConflictError, NotFoundError } from "@/lib/errors";
 import { r2Storage } from "@/lib/storage/r2-client";
 import type { ResumeStorage } from "@/lib/storage/types";
@@ -26,6 +26,7 @@ export function toResume(row: ResumeRow): Resume {
     fileSize: row.fileSize,
     status: row.deletedAt ? "archived" : "active",
     createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
   };
 }
 
@@ -131,74 +132,74 @@ export async function getResumeFile(
 }
 
 /**
- * Soft-delete an active resume (US3, FR-009/010). Only sets `deletedAt` — the R2 object is
- * retained, never purged, so it remains part of its label's history.
+ * Whether any of the user's send batches attached this exact resume row. A resume that was
+ * sent is part of the truthful record of what went out (Constitution II) — its file must
+ * stay retrievable from history, so it is retained rather than purged. One that was never
+ * sent references nothing and is safe to remove entirely.
  */
-export async function deleteResume(userId: string, id: string, db: Db = defaultDb): Promise<void> {
-  const deleted = await db
-    .update(resumes)
-    .set({ deletedAt: new Date(), updatedAt: new Date() })
-    .where(and(eq(resumes.id, id), eq(resumes.userId, userId), isNull(resumes.deletedAt)))
-    .returning({ id: resumes.id });
-  if (deleted.length === 0) throw new NotFoundError();
+async function isReferencedBySend(userId: string, resumeId: string, db: Db): Promise<boolean> {
+  const [hit] = await db
+    .select({ id: sendBatches.id })
+    .from(sendBatches)
+    .where(and(eq(sendBatches.userId, userId), eq(sendBatches.attachedResumeId, resumeId)))
+    .limit(1);
+  return hit !== undefined;
 }
 
 /**
- * Restore an archived resume as the active one for its label (US4, FR-012/013) — a
- * "revert to this version." Archives whatever row is currently active for that label (if
- * any) and reactivates the target, atomically. Does not mint a new version (the same
- * file is being reactivated, not re-uploaded).
+ * Delete an active resume (US3, FR-009/010), retain-if-sent:
+ * - Never attached to a send → hard-delete the row and purge its R2 object. Nothing
+ *   references it, so keeping either around is pure waste (the storage leak this fixes).
+ * - Attached to a past send → soft-delete only (set `deletedAt`) and keep the R2 object,
+ *   so `history` can still open the exact file that recipient received.
  *
- * Note: this project's Neon HTTP driver (`drizzle-orm/neon-http`) has no `db.transaction`
- * support (it throws "No transactions support in neon-http driver"). `db.batch(...)`
- * (Neon's HTTP batch endpoint) is the atomic alternative used here.
- *
- * Restoring a version that's already active is a no-op (spec Edge Cases: "treated as
- * already satisfied — no change occurs"), not an error — it returns the resume unchanged.
+ * The R2 object is purged only after the row is gone, and a not-found delete is swallowed
+ * (`r2Storage.deleteObject` uses `isNotFoundError` upstream) so a retry or double-click is
+ * idempotent rather than a hard error.
  */
-export async function restoreResume(userId: string, id: string, db: Db = defaultDb): Promise<Resume> {
+export async function deleteResume(
+  userId: string,
+  id: string,
+  opts: { db?: Db; storage?: ResumeStorage } = {},
+): Promise<void> {
+  const db = opts.db ?? defaultDb;
+  const storage = opts.storage ?? r2Storage;
+
   const [target] = await db
     .select()
     .from(resumes)
-    .where(and(eq(resumes.id, id), eq(resumes.userId, userId)))
+    .where(and(eq(resumes.id, id), eq(resumes.userId, userId), isNull(resumes.deletedAt)))
     .limit(1);
   if (!target) throw new NotFoundError();
-  if (target.deletedAt === null) return toResume(target);
 
-  const [currentActive] = await db
-    .select({ id: resumes.id })
-    .from(resumes)
-    .where(and(eq(resumes.userId, userId), eq(resumes.label, target.label), isNull(resumes.deletedAt)))
-    .limit(1);
-
-  const now = new Date();
-  const reactivate = db.update(resumes).set({ deletedAt: null, updatedAt: now }).where(eq(resumes.id, target.id));
-  if (currentActive) {
-    // Archive the currently-active row BEFORE reactivating the target — the partial
-    // unique index on (user_id, label) WHERE deleted_at IS NULL is checked per-statement,
-    // not deferred to end of transaction, so reactivating first would momentarily leave
-    // two active rows under the same label and violate it.
-    const archiveCurrent = db.update(resumes).set({ deletedAt: now, updatedAt: now }).where(eq(resumes.id, currentActive.id));
-    await db.batch([archiveCurrent, reactivate]);
-  } else {
-    await reactivate;
+  if (await isReferencedBySend(userId, target.id, db)) {
+    await db
+      .update(resumes)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(resumes.id, target.id), isNull(resumes.deletedAt)));
+    return;
   }
 
-  const [row] = await db.select().from(resumes).where(eq(resumes.id, target.id)).limit(1);
-  return toResume(row!);
+  await db.delete(resumes).where(and(eq(resumes.id, target.id), eq(resumes.userId, userId)));
+  await storage.deleteObject(target.storageKey).catch(() => {});
 }
 
 /**
- * Replace an active resume with a new file, in one step (a dedicated action, not a side
- * effect of `uploadResume` — see specs/002-resume-storage/plan for why these are separate:
- * `uploadResume` keeps unconditionally rejecting a duplicate label, FR-005/US1 unchanged).
- * Archives the target and inserts the new version atomically via `db.batch` (same reason
- * as `restoreResume`: this project's Neon HTTP driver has no `db.transaction()` support).
+ * Update an active resume's file in place — the user's mental model is "keep this resume
+ * current," not "make a new version" (there is no user-facing versioning). A dedicated
+ * action, not a side effect of `uploadResume` (which still rejects a duplicate label
+ * unconditionally, FR-005/US1 unchanged). Retain-if-sent, mirroring `deleteResume`:
  *
- * Known, accepted gap at this feature's single-user scale: if two requests replace/delete
- * the same resume at nearly the same instant, `archiveOld`'s `isNull(deletedAt)` guard
- * could silently affect 0 rows while `insertNew` still proceeds — matching the same
- * unguarded-window risk `restoreResume` already carries between its reads and its batch.
+ * - The current file was never attached to a send → overwrite the row in place (same id)
+ *   with the new file, then purge the old R2 object. Nothing referenced the old file, so
+ *   no history is lost and no orphan is left behind.
+ * - The current file was attached to a past send → its bytes are part of the record of
+ *   what went out, so keep that row (soft-deleted, its R2 object retained) as a frozen
+ *   reference for history, and insert the new file as the active row. This is the only
+ *   path that still mints a new row/version, and it is invisible to the user.
+ *
+ * The two-statement archive+insert runs atomically via `runAtomic` (lib/db/client): a
+ * `db.batch` on Neon's HTTP driver, a real transaction on node-postgres.
  */
 export async function replaceResume(
   userId: string,
@@ -217,38 +218,43 @@ export async function replaceResume(
     .limit(1);
   if (!target || target.deletedAt !== null) throw new NotFoundError();
 
-  const priorVersions = await db
-    .select({ version: resumes.version })
-    .from(resumes)
-    .where(and(eq(resumes.userId, userId), eq(resumes.label, target.label)));
-  const version = nextResumeVersion(priorVersions.map((v) => v.version));
-
   const newId = crypto.randomUUID();
   const storageKey = `${userId}/${newId}.pdf`;
   await storage.uploadObject(storageKey, file.buffer, "application/pdf");
 
   const now = new Date();
-  const archiveOld = db
-    .update(resumes)
-    .set({ deletedAt: now, updatedAt: now })
-    .where(and(eq(resumes.id, target.id), isNull(resumes.deletedAt)));
-  const insertNew = db.insert(resumes).values({
-    id: newId,
-    userId,
-    label: target.label,
-    version,
-    fileName: fileName ?? file.name,
-    storageKey,
-    fileSize: file.size,
-  });
+  const values = { fileName: fileName ?? file.name, storageKey, fileSize: file.size, updatedAt: now };
 
+  if (await isReferencedBySend(userId, target.id, db)) {
+    const priorVersions = await db
+      .select({ version: resumes.version })
+      .from(resumes)
+      .where(and(eq(resumes.userId, userId), eq(resumes.label, target.label)));
+    const version = nextResumeVersion(priorVersions.map((v) => v.version));
+    try {
+      await runAtomic(db, (x) => [
+        x
+          .update(resumes)
+          .set({ deletedAt: now, updatedAt: now })
+          .where(and(eq(resumes.id, target.id), isNull(resumes.deletedAt))),
+        x.insert(resumes).values({ id: newId, userId, label: target.label, version, ...values }),
+      ]);
+    } catch (err) {
+      await storage.deleteObject(storageKey).catch(() => {});
+      throw err;
+    }
+    const [row] = await db.select().from(resumes).where(eq(resumes.id, newId)).limit(1);
+    return toResume(row!);
+  }
+
+  // Never sent: overwrite in place, then purge the now-orphaned old file.
   try {
-    await db.batch([archiveOld, insertNew]);
+    await db.update(resumes).set(values).where(eq(resumes.id, target.id));
   } catch (err) {
     await storage.deleteObject(storageKey).catch(() => {});
     throw err;
   }
-
-  const [row] = await db.select().from(resumes).where(eq(resumes.id, newId)).limit(1);
+  await storage.deleteObject(target.storageKey).catch(() => {});
+  const [row] = await db.select().from(resumes).where(eq(resumes.id, target.id)).limit(1);
   return toResume(row!);
 }

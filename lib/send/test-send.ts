@@ -8,6 +8,8 @@ import { senderContextFromProfile } from "@/lib/profile/context";
 import { getActiveAccount } from "@/lib/email/account-service";
 import { resolveProvider } from "@/lib/email/factory";
 import type { EmailProvider } from "@/lib/email/provider";
+import { resolveAttachment } from "@/lib/send/service";
+import type { ResumeStorage } from "@/lib/storage/types";
 import type { TestSendRequest } from "@/lib/validation/send";
 
 /**
@@ -28,7 +30,7 @@ export async function sendTestEmail(
   userId: string,
   request: TestSendRequest,
   fromName: string | null,
-  opts: { db?: Db; provider?: EmailProvider } = {},
+  opts: { db?: Db; provider?: EmailProvider; storage?: ResumeStorage } = {},
 ): Promise<TestSendResult> {
   const db = opts.db ?? defaultDb;
 
@@ -60,6 +62,11 @@ export async function sendTestEmail(
     if (row) contact = { name: row.name, company: row.company, role: row.role };
   }
 
+  // A test must mirror the real send, attachment included — otherwise it can't verify what
+  // actually goes out (Constitution II, truthful preview). Resolved the same way as a real
+  // send (ownership + still-active checked).
+  const attachment = request.resumeId ? await resolveAttachment(userId, request.resumeId, db, opts.storage) : undefined;
+
   const rendered = renderTemplate(base, { contact, sender });
   const result = await provider.sendEmail(
     {
@@ -69,6 +76,7 @@ export async function sendTestEmail(
       subject: `${TEST_SUBJECT_PREFIX}${rendered.subject}`,
       bodyHtml: rendered.bodyHtml,
       bodyText: rendered.bodyText,
+      attachment,
     },
     account.credentials,
   );

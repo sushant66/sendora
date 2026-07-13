@@ -15,7 +15,6 @@ vi.mock("@/lib/resumes/service", () => ({
   listResumes: vi.fn(),
   getResumeFile: vi.fn(),
   deleteResume: vi.fn(),
-  restoreResume: vi.fn(),
 }));
 vi.mock("@/lib/auth/session", () => ({ requireUser: vi.fn(), getCurrentUser: vi.fn() }));
 

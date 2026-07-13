@@ -12,7 +12,6 @@ vi.mock("@/lib/resumes/service", () => ({
   listResumes: vi.fn(),
   getResumeFile: vi.fn(),
   deleteResume: vi.fn(),
-  restoreResume: vi.fn(),
 }));
 vi.mock("@/lib/auth/session", () => ({ requireUser: vi.fn(), getCurrentUser: vi.fn() }));
 
@@ -34,7 +33,7 @@ beforeEach(() => {
 
 describe("GET /api/resumes", () => {
   it("returns 200 with active resumes by default", async () => {
-    const items = [{ id: "r1", label: "Backend Engineer", version: 1, fileName: "r.pdf", fileSize: 100, status: "active" as const, createdAt: "2026-07-11T00:00:00.000Z" }];
+    const items = [{ id: "r1", label: "Backend Engineer", version: 1, fileName: "r.pdf", fileSize: 100, status: "active" as const, createdAt: "2026-07-11T00:00:00.000Z", updatedAt: "2026-07-11T00:00:00.000Z" }];
     vi.mocked(service.listResumes).mockResolvedValue({ items });
     const res = await GET(getRequest("/api/resumes"));
     expect(res.status).toBe(200);

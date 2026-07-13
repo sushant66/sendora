@@ -20,7 +20,6 @@ vi.mock("@/lib/resumes/service", () => ({
   listResumes: vi.fn(),
   getResumeFile: vi.fn(),
   deleteResume: vi.fn(),
-  restoreResume: vi.fn(),
   replaceResume: vi.fn(),
 }));
 vi.mock("@/lib/auth/session", () => ({ requireUser: vi.fn(), getCurrentUser: vi.fn() }));
@@ -48,7 +47,7 @@ describe("POST /api/resumes/:id/replace", () => {
   const ctx = { params: Promise.resolve({ id: "r1" }) };
 
   it("replaces the active resume with a new file → 200 with the new active resume", async () => {
-    const replaced = { id: "r2", label: "Backend Engineer", version: 2, fileName: "v2.pdf", fileSize: PDF_BYTES.byteLength, status: "active" as const, createdAt: "2026-07-12T00:00:00.000Z" };
+    const replaced = { id: "r2", label: "Backend Engineer", version: 2, fileName: "v2.pdf", fileSize: PDF_BYTES.byteLength, status: "active" as const, createdAt: "2026-07-12T00:00:00.000Z", updatedAt: "2026-07-12T00:00:00.000Z" };
     vi.mocked(service.replaceResume).mockResolvedValue(replaced);
 
     const res = await POST(replaceRequest("/api/resumes/r1/replace", { name: "v2.pdf", type: "application/pdf", bytes: PDF_BYTES }), ctx);
@@ -58,7 +57,7 @@ describe("POST /api/resumes/:id/replace", () => {
   });
 
   it("passes an optional custom fileName through, normalized (003-resume-attachments)", async () => {
-    const replaced = { id: "r2", label: "Backend Engineer", version: 2, fileName: "My Resume.pdf", fileSize: PDF_BYTES.byteLength, status: "active" as const, createdAt: "2026-07-12T00:00:00.000Z" };
+    const replaced = { id: "r2", label: "Backend Engineer", version: 2, fileName: "My Resume.pdf", fileSize: PDF_BYTES.byteLength, status: "active" as const, createdAt: "2026-07-12T00:00:00.000Z", updatedAt: "2026-07-12T00:00:00.000Z" };
     vi.mocked(service.replaceResume).mockResolvedValue(replaced);
 
     const res = await POST(replaceRequest("/api/resumes/r1/replace", { name: "v2.pdf", type: "application/pdf", bytes: PDF_BYTES }, "My Resume"), ctx);

@@ -85,11 +85,3 @@ export function buildRawMessage(
   ];
   return Buffer.from(lines.join("\r\n"), "utf8").toString("base64url");
 }
-
-/** Safely under Gmail's ~25MB raw-message limit (FR-011, research.md §6). */
-export const MAX_RAW_MESSAGE_BYTES = 20 * 1024 * 1024;
-
-/** Encoded byte length of the assembled message — the same string `sendEmail` transmits. */
-export function rawMessageByteLength(message: OutgoingMessage): number {
-  return Buffer.byteLength(buildRawMessage(message), "utf8");
-}

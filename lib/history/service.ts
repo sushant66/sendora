@@ -133,7 +133,7 @@ export async function listHistory(
       .select({ id: resumes.id, label: resumes.label, fileName: resumes.fileName })
       .from(resumes)
       .where(and(eq(resumes.userId, userId), inArray(resumes.id, resumeIds)));
-    for (const r of resumeRows) resumeById.set(r.id, { label: r.label, fileName: r.fileName });
+    for (const r of resumeRows) resumeById.set(r.id, { id: r.id, label: r.label, fileName: r.fileName });
   }
 
   const items: HistoryEvent[] = page.map((b) => ({
@@ -185,6 +185,7 @@ export async function getHistoryDetail(
       batchTotal: sendBatches.total,
       batchSent: sendBatches.sentCount,
       batchFailed: sendBatches.failedCount,
+      resumeId: resumes.id,
       resumeLabel: resumes.label,
       resumeFileName: resumes.fileName,
     })
@@ -211,7 +212,10 @@ export async function getHistoryDetail(
       failed: row.batchFailed,
     },
     // Tolerates the join coming back empty, same reasoning as listHistory above.
-    attachedResume: row.resumeLabel !== null && row.resumeFileName !== null ? { label: row.resumeLabel, fileName: row.resumeFileName } : null,
+    attachedResume:
+      row.resumeId !== null && row.resumeLabel !== null && row.resumeFileName !== null
+        ? { id: row.resumeId, label: row.resumeLabel, fileName: row.resumeFileName }
+        : null,
   };
 }
 

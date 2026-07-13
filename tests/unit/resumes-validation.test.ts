@@ -59,6 +59,16 @@ describe("ResumeFileSchema", () => {
   it("rejects an empty file", () => {
     expect(() => ResumeFileSchema.parse(file({ size: 0, buffer: Buffer.alloc(0) }))).toThrow();
   });
+
+  it("sanitizes the source file name so it is safe to interpolate into MIME/HTTP headers", () => {
+    // A quote or control char here would otherwise break the Content-Disposition header.
+    expect(ResumeFileSchema.parse(file({ name: 'evil".pdf' })).name).toBe("evil.pdf");
+    expect(ResumeFileSchema.parse(file({ name: "a/b\\c\r\n.pdf" })).name).toBe("abc.pdf");
+  });
+
+  it("falls back to a default when the source file name is all-unsafe", () => {
+    expect(ResumeFileSchema.parse(file({ name: '///"' })).name).toBe("resume.pdf");
+  });
 });
 
 /**
