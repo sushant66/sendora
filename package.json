@@ -17,7 +17,8 @@
     "test:a11y": "playwright test --grep @a11y",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:seed": "tsx lib/db/seed.ts"
+    "db:seed": "tsx lib/db/seed.ts",
+    "prepare": "husky"
   },
   "dependencies": {
     "@astryxdesign/core": "^0.1.4",
@@ -58,7 +59,9 @@
     "drizzle-kit": "^0.31.10",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.2.10",
+    "husky": "^9.1.7",
     "jsdom": "^29.1.1",
+    "lint-staged": "^17.0.8",
     "prettier": "^3.9.5",
     "tsx": "^4.23.0",
     "typescript": "^5.9.3",
