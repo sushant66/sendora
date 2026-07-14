@@ -43,10 +43,11 @@ export function SiteNav({ authed }: { authed: boolean }) {
         {authed ? (
           <LinkButton href="/dashboard" label="Go to dashboard" variant="primary" />
         ) : (
-          <HStack gap={2} align="center">
-            <LinkButton href="/sign-in" label="Sign in" variant="ghost" />
-            <LinkButton href="/sign-in" label="Get started" variant="primary" />
-          </HStack>
+          // Auth is Google-OAuth-only, so "Sign in" and "Get started" would lead to
+          // the same single door. The nav carries the quiet returning-user affordance;
+          // the hero and closing band own the loud "Get started" conversion CTA. Keeping
+          // both here would also put two gold primary buttons in one viewport.
+          <LinkButton href="/sign-in" label="Sign in" variant="secondary" />
         )}
       </HStack>
     </VStack>
