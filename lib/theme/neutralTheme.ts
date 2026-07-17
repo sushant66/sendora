@@ -27,64 +27,63 @@
  * Only overrides tokens that differ from the defaults.
  */
 
-import {defineTheme, defineSyntaxTheme} from '@astryxdesign/core/theme';
-import {neutralIconRegistry} from './icons';
+import { defineTheme, defineSyntaxTheme } from "@astryxdesign/core/theme";
+import { neutralIconRegistry } from "./icons";
 
 /**
  * Neutral syntax palette — pulled from the OKLCH T30 (light) / T80 (dark)
  * stops of the categorical ramps. Same colors used by --color-icon-* tokens.
  */
 const neutralSyntax = defineSyntaxTheme({
-  name: 'xds-neutral',
+  name: "xds-neutral",
   tokens: {
-    keyword: ['#700084', '#efa8ff'],    // purple T30/T80
-    string: ['#005600', '#a6d2a2'],     // green (sat T30 / pastel T80)
-    comment: ['#737373', '#a3a3a3'],    // neutral
-    number: ['#6e3500', '#ffb37f'],     // orange
-    function: ['#00458c', '#a0caff'],   // blue T30/T80 H=255
-    type: ['#700084', '#efa8ff'],       // purple
-    variable: ['#171717', '#e5e5e5'],   // near-black / near-white
-    operator: ['#737373', '#a3a3a3'],   // neutral
-    constant: ['#6e3500', '#ffb37f'],   // orange
-    tag: ['#89001a', '#ffaeaa'],        // red
-    attribute: ['#584400', '#eec12f'],  // yellow
-    property: ['#005348', '#83dac9'],   // teal
-    punctuation: ['#a3a3a3', '#525252'],// neutral
-    background: ['#fafafa', '#0a0a0a'],
+    keyword: ["#700084", "#efa8ff"], // purple T30/T80
+    string: ["#005600", "#a6d2a2"], // green (sat T30 / pastel T80)
+    comment: ["#737373", "#a3a3a3"], // neutral
+    number: ["#6e3500", "#ffb37f"], // orange
+    function: ["#00458c", "#a0caff"], // blue T30/T80 H=255
+    type: ["#700084", "#efa8ff"], // purple
+    variable: ["#171717", "#e5e5e5"], // near-black / near-white
+    operator: ["#737373", "#a3a3a3"], // neutral
+    constant: ["#6e3500", "#ffb37f"], // orange
+    tag: ["#89001a", "#ffaeaa"], // red
+    attribute: ["#584400", "#eec12f"], // yellow
+    property: ["#005348", "#83dac9"], // teal
+    punctuation: ["#a3a3a3", "#525252"], // neutral
+    background: ["#fafafa", "#0a0a0a"],
   },
 });
 
 export const neutralTheme = defineTheme({
-  name: 'neutral',
+  name: "neutral",
 
   // Typography: Figtree across body, heading, and display sizes (display
   // size tokens inherit from heading.family). Monospace stays as the
   // platform default for code.
   // Scale: base=14, ratio=1.2. Bold weights on h3/h4 for subsection hierarchy.
   typography: {
-    scale: {base: 14, ratio: 1.2},
+    scale: { base: 14, ratio: 1.2 },
     body: {
-      family: 'Figtree',
+      family: "Figtree",
       fallbacks:
         '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
     },
     heading: {
-      family: 'Figtree',
+      family: "Figtree",
       fallbacks:
         '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-      weights: {3: 'bold', 4: 'bold'},
+      weights: { 3: "bold", 4: "bold" },
     },
     code: {
-      family: 'ui-monospace',
-      fallbacks:
-        '"SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+      family: "ui-monospace",
+      fallbacks: '"SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
     },
   },
 
   // Motion: snappier than default to match shadcn/Tailwind conventions.
   // Produces: fast-min=95ms, fast=125ms, fast-max=165ms,
   //           medium-min=225ms, medium=300ms, medium-max=400ms.
-  motion: {fast: 125, medium: 300, slow: 700, ratio: 0.75},
+  motion: { fast: 125, medium: 300, slow: 700, ratio: 0.75 },
 
   syntax: neutralSyntax,
 
@@ -124,45 +123,45 @@ export const neutralTheme = defineTheme({
     //
     // All values use the OKLCH Neutral tonal palette (chroma=0).
     // =========================================================================
-    '--color-background-surface': ['#ffffff', '#262626'],
-    '--color-background-body':    ['#f1f1f1', '#1b1b1b'],
-    '--color-background-card':    ['#ffffff', '#1b1b1b'],
-    '--color-background-popover': ['#ffffff', '#1b1b1b'],
-    '--color-background-muted':   ['#f1f1f1', '#1b1b1b'],
+    "--color-background-surface": ["#ffffff", "#262626"],
+    "--color-background-body": ["#f1f1f1", "#1b1b1b"],
+    "--color-background-card": ["#ffffff", "#1b1b1b"],
+    "--color-background-popover": ["#ffffff", "#1b1b1b"],
+    "--color-background-muted": ["#f1f1f1", "#1b1b1b"],
 
     // Accent + neutral surface tints (sit alongside backgrounds)
     // Brand gold, tuned per mode. Dark = the exact landing gold so the marketing
     // surface (forced color-scheme:dark) stays pixel-identical; light = a deeper
     // ochre-gold so a filled CTA clears WCAG AA against white surfaces (a bright
     // gold on white is too low-contrast). on-accent carries the label color.
-    '--color-accent':       ['oklch(0.64 0.14 66)', 'oklch(0.81 0.128 78)'],
-    '--color-accent-muted': ['oklch(0.64 0.14 66 / 0.12)', 'oklch(0.81 0.128 78 / 0.18)'],
-    '--color-neutral':      ['#0000000F', '#FFFFFF1A'],
+    "--color-accent": ["oklch(0.64 0.14 66)", "oklch(0.81 0.128 78)"],
+    "--color-accent-muted": ["oklch(0.64 0.14 66 / 0.12)", "oklch(0.81 0.128 78 / 0.18)"],
+    "--color-neutral": ["#0000000F", "#FFFFFF1A"],
 
     // Overlays (modal scrims, hover/pressed tints)
-    '--color-overlay':         ['#00000080', '#000000CC'],
-    '--color-overlay-hover':   ['#0000000D', '#FFFFFF0D'],
-    '--color-overlay-pressed': ['#0000001A', '#FFFFFF1A'],
+    "--color-overlay": ["#00000080", "#000000CC"],
+    "--color-overlay-hover": ["#0000000D", "#FFFFFF0D"],
+    "--color-overlay-pressed": ["#0000001A", "#FFFFFF1A"],
 
     // Text
-    '--color-text-primary':   ['#171717', '#fafafa'],
-    '--color-text-secondary': ['#737373', '#a3a3a3'],
-    '--color-text-disabled':  ['#a3a3a3', '#525252'],
-    '--color-text-accent':    ['#262626', '#ebebeb'],
-    '--color-on-dark':    '#ffffff',
-    '--color-on-light':   '#171717',
+    "--color-text-primary": ["#171717", "#fafafa"],
+    "--color-text-secondary": ["#737373", "#a3a3a3"],
+    "--color-text-disabled": ["#a3a3a3", "#525252"],
+    "--color-text-accent": ["#262626", "#ebebeb"],
+    "--color-on-dark": "#ffffff",
+    "--color-on-light": "#171717",
     // Contrast: gold accent takes a dark label in both modes. Light = near-ink
     // (#171717) on the deep ochre; dark = the landing's warm ink on bright gold.
-    '--color-on-accent':  ['#171717', 'oklch(0.26 0.04 72)'],
-    '--color-on-success': ['#ffffff', '#171717'],
-    '--color-on-error':   ['#ffffff', '#171717'],
-    '--color-on-warning': '#171717',
+    "--color-on-accent": ["#171717", "oklch(0.26 0.04 72)"],
+    "--color-on-success": ["#ffffff", "#171717"],
+    "--color-on-error": ["#ffffff", "#171717"],
+    "--color-on-warning": "#171717",
 
     // Icon
-    '--color-icon-accent':    ['oklch(0.64 0.14 66)', 'oklch(0.81 0.128 78)'],
-    '--color-icon-primary':   ['#171717', '#fafafa'],
-    '--color-icon-secondary': ['#737373', '#a3a3a3'],
-    '--color-icon-disabled':  ['#a3a3a3', '#525252'],
+    "--color-icon-accent": ["oklch(0.64 0.14 66)", "oklch(0.81 0.128 78)"],
+    "--color-icon-primary": ["#171717", "#fafafa"],
+    "--color-icon-secondary": ["#737373", "#a3a3a3"],
+    "--color-icon-disabled": ["#a3a3a3", "#525252"],
 
     // Status / Sentiment — dark mode follows the issue #2150 rubric:
     //
@@ -191,21 +190,26 @@ export const neutralTheme = defineTheme({
     //   slots (palette T70). Composited onto body #1b1b1b, the effective
     //   bg luminance hits ~1.65-1.70:1 vs body — visible colored surface
     //   without the heaviness of a solid T20 panel.
-    '--color-success': ['#007004', '#9fe59b'],
-    '--color-error': ['#a50c25', '#ffc6c1'],
-    '--color-warning': ['#745b00', '#fdcf4f'],
-    '--color-success-muted': ['#c5e5c0', '#84c9803D'],
-    '--color-error-muted': ['#facecb', '#ff9e973D'],
-    '--color-warning-muted': ['#f8da9d', '#deb4333D'],
+    "--color-success": ["#007004", "#9fe59b"],
+    "--color-error": ["#a50c25", "#ffc6c1"],
+    "--color-warning": ["#745b00", "#fdcf4f"],
+    "--color-success-muted": ["#c5e5c0", "#84c9803D"],
+    "--color-error-muted": ["#facecb", "#ff9e973D"],
+    // Warning banners are deliberately quieter than success/error: a caution
+    // is a heads-up, not a problem to fix. Dark drops to 15% alpha ('26') and
+    // light lifts to a paler butter tint so the fill reads as a soft caution
+    // rather than a saturated slab. This intentionally breaks the shared 24%
+    // treatment above — severity is encoded in weight (error loud, warning soft).
+    "--color-warning-muted": ["#fbeaca", "#deb43326"],
 
     // Border
-    '--color-border': ['#ebebeb', '#FFFFFF1A'],
-    '--color-border-emphasized': ['#d4d4d4', '#525252'],
+    "--color-border": ["#ebebeb", "#FFFFFF1A"],
+    "--color-border-emphasized": ["#d4d4d4", "#525252"],
 
     // Effects
-    '--color-skeleton': ['#ebebeb', '#525252'],
-    '--color-shadow': ['#0000001A', '#0000004D'],
-    '--color-tint-hover': ['black', 'white'],
+    "--color-skeleton": ["#ebebeb", "#525252"],
+    "--color-shadow": ["#0000001A", "#0000004D"],
+    "--color-tint-hover": ["black", "white"],
 
     // =========================================================================
     // Categorical — light mode uses pastel surfaces + dark colored text;
@@ -239,16 +243,16 @@ export const neutralTheme = defineTheme({
     // overlay surface composites onto body to ~1.65:1 luminance.
 
     // Red  H=22 — source #eb183a
-    '--color-background-red': ['#facecb', '#ff9e973D'],
-    '--color-border-red': ['#e6bab8', '#ff6f6c'],
-    '--color-icon-red': ['#89001a', '#ff9e97'],
-    '--color-text-red': ['#89001a', '#ffc6c1'],
+    "--color-background-red": ["#facecb", "#ff9e973D"],
+    "--color-border-red": ["#e6bab8", "#ff6f6c"],
+    "--color-icon-red": ["#89001a", "#ff9e97"],
+    "--color-text-red": ["#89001a", "#ffc6c1"],
 
     // Orange  H=55 — source #d57113
-    '--color-background-orange': ['#fad0b5', '#ffa2583D'],
-    '--color-border-orange': ['#e6bda2', '#e2883e'],
-    '--color-icon-orange': ['#6e3500', '#ffa258'],
-    '--color-text-orange': ['#6e3500', '#ffc9a2'],
+    "--color-background-orange": ["#fad0b5", "#ffa2583D"],
+    "--color-border-orange": ["#e6bda2", "#e2883e"],
+    "--color-icon-orange": ["#6e3500", "#ffa258"],
+    "--color-text-orange": ["#6e3500", "#ffc9a2"],
 
     // Yellow  H=90 — source #f8c723
     // Light-mode butter-yellow pastel at H=85 C=0.085 L=0.90 — yellow
@@ -259,16 +263,16 @@ export const neutralTheme = defineTheme({
     // to red/blue's perceived brightness without losing yellow identity.
     // Dark-mode comes from the canonical H=90 ramp for tonal-palette
     // consistency.
-    '--color-background-yellow': ['#f8da9d', '#deb4333D'],
-    '--color-border-yellow': ['#e4c279', '#c0990e'],
-    '--color-icon-yellow': ['#584400', '#deb433'],
-    '--color-text-yellow': ['#584400', '#fdcf4f'],
+    "--color-background-yellow": ["#f8da9d", "#deb4333D"],
+    "--color-border-yellow": ["#e4c279", "#c0990e"],
+    "--color-icon-yellow": ["#584400", "#deb433"],
+    "--color-text-yellow": ["#584400", "#fdcf4f"],
 
     // Green  H=144 — source #358a3a
-    '--color-background-green': ['#c5e5c0', '#84c9803D'],
-    '--color-border-green': ['#b2d1ac', '#69ad67'],
-    '--color-icon-green': ['#0c5700', '#84c980'],
-    '--color-text-green': ['#0c5700', '#9fe59b'],
+    "--color-background-green": ["#c5e5c0", "#84c9803D"],
+    "--color-border-green": ["#b2d1ac", "#69ad67"],
+    "--color-icon-green": ["#0c5700", "#84c980"],
+    "--color-text-green": ["#0c5700", "#9fe59b"],
 
     // Teal  H=180 — source #0c7365
     // Light pastel uses L=0.87 C=0.065 (a step darker + less chroma than
@@ -277,36 +281,36 @@ export const neutralTheme = defineTheme({
     // ~5% brighter than red/blue because the eye's luminance response
     // peaks in this band. Dropping L+C brings perceived brightness in
     // line with the rest of the palette without losing hue identity.
-    '--color-background-teal': ['#a5e3d6', '#7ec6b83D'],
-    '--color-border-teal': ['#94d6c8', '#63ab9d'],
-    '--color-icon-teal': ['#005348', '#7ec6b8'],
-    '--color-text-teal': ['#005348', '#99e2d3'],
+    "--color-background-teal": ["#a5e3d6", "#7ec6b83D"],
+    "--color-border-teal": ["#94d6c8", "#63ab9d"],
+    "--color-icon-teal": ["#005348", "#7ec6b8"],
+    "--color-text-teal": ["#005348", "#99e2d3"],
 
     // Cyan  H=215 — source #0c6f82
     // Same L=0.87 C=0.065 pastel as teal (luminance overshoot compensation).
-    '--color-background-cyan': ['#a3e0ef', '#83c2d43D'],
-    '--color-border-cyan': ['#91d3e3', '#67a7b8'],
-    '--color-icon-cyan': ['#00505f', '#83c2d4'],
-    '--color-text-cyan': ['#00505f', '#9edef0'],
+    "--color-background-cyan": ["#a3e0ef", "#83c2d43D"],
+    "--color-border-cyan": ["#91d3e3", "#67a7b8"],
+    "--color-icon-cyan": ["#00505f", "#83c2d4"],
+    "--color-text-cyan": ["#00505f", "#9edef0"],
 
     // Blue  H=255 — source #0074e2
     //   T50 #0074e2 reserved for filled Info badge / progressbar / inset hover.
-    '--color-background-blue': ['#c4ddfb', '#9eb7ff3D'],
-    '--color-border-blue': ['#b1c9e7', '#6d9cfe'],
-    '--color-icon-blue': ['#00458c', '#9eb7ff'],
-    '--color-text-blue': ['#00458c', '#c7d3ff'],
+    "--color-background-blue": ["#c4ddfb", "#9eb7ff3D"],
+    "--color-border-blue": ["#b1c9e7", "#6d9cfe"],
+    "--color-icon-blue": ["#00458c", "#9eb7ff"],
+    "--color-text-blue": ["#00458c", "#c7d3ff"],
 
     // Purple  H=320 — source #980fb2
-    '--color-background-purple': ['#eccef3', '#f297ff3D'],
-    '--color-border-purple': ['#d8bbdf', '#dd74f0'],
-    '--color-icon-purple': ['#700084', '#f297ff'],
-    '--color-text-purple': ['#700084', '#fac1ff'],
+    "--color-background-purple": ["#eccef3", "#f297ff3D"],
+    "--color-border-purple": ["#d8bbdf", "#dd74f0"],
+    "--color-icon-purple": ["#700084", "#f297ff"],
+    "--color-text-purple": ["#700084", "#fac1ff"],
 
     // Pink  H=355 — source #b10e69
-    '--color-background-pink': ['#fccadc', '#ff99c33D'],
-    '--color-border-pink': ['#e7b7c8', '#f273aa'],
-    '--color-icon-pink': ['#83004b', '#ff99c3'],
-    '--color-text-pink': ['#83004b', '#ffc3da'],
+    "--color-background-pink": ["#fccadc", "#ff99c33D"],
+    "--color-border-pink": ["#e7b7c8", "#f273aa"],
+    "--color-icon-pink": ["#83004b", "#ff99c3"],
+    "--color-text-pink": ["#83004b", "#ffc3da"],
 
     // Gray (categorical neutral, chroma 0)
     //   Light: #e5e5e5 (Neutral 200) so it's visibly distinct from the
@@ -316,20 +320,20 @@ export const neutralTheme = defineTheme({
     //          badge uses; clearly distinct from the body T10 #1b1b1b
     //          while staying chroma-0 neutral. Solid T15 #1c1c1c was
     //          indistinguishable from --color-background-muted.
-    '--color-background-gray': ['#e5e5e5', 'var(--color-neutral)'],
-    '--color-border-gray': ['#d4d4d4', '#262626'],
-    '--color-icon-gray': ['#525252', '#a3a3a3'],
-    '--color-text-gray': ['#262626', '#e5e5e5'],
+    "--color-background-gray": ["#e5e5e5", "var(--color-neutral)"],
+    "--color-border-gray": ["#d4d4d4", "#262626"],
+    "--color-icon-gray": ["#525252", "#a3a3a3"],
+    "--color-text-gray": ["#262626", "#e5e5e5"],
 
     // =========================================================================
     // Radius — slightly larger than default (kept as-is)
     // =========================================================================
-    '--radius-none': '0.25rem',
-    '--radius-inner': '0.375rem',
-    '--radius-element': '0.625rem',
-    '--radius-container': '0.75rem',
-    '--radius-page': '1.75rem',
-    '--radius-full': '9999px',
+    "--radius-none": "0.25rem",
+    "--radius-inner": "0.375rem",
+    "--radius-element": "0.625rem",
+    "--radius-container": "0.75rem",
+    "--radius-page": "1.75rem",
+    "--radius-full": "9999px",
 
     // =========================================================================
     // Shadows
@@ -349,25 +353,27 @@ export const neutralTheme = defineTheme({
     // The inset layer uses light-dark(transparent, ...) so light mode is
     // unaffected — main's exact light values are preserved.
     // =========================================================================
-    '--shadow-low':
-      '0 2px 4px light-dark(oklch(0 0 0 / 5%), oklch(0 0 0 / 25%)), ' +
-      '0 4px 8px light-dark(oklch(0 0 0 / 10%), oklch(0 0 0 / 40%)), ' +
-      'inset 0 0 0 1px light-dark(transparent, oklch(1 0 0 / 8%))',
-    '--shadow-med':
-      '0 2px 4px light-dark(oklch(0 0 0 / 5%), oklch(0 0 0 / 35%)), ' +
-      '0 4px 12px light-dark(oklch(0 0 0 / 10%), oklch(0 0 0 / 50%)), ' +
-      'inset 0 0 0 1px light-dark(transparent, oklch(1 0 0 / 12%))',
-    '--shadow-high':
-      '0 4px 6px light-dark(oklch(0 0 0 / 10%), oklch(0 0 0 / 50%)), ' +
-      '0 12px 24px light-dark(oklch(0 0 0 / 15%), oklch(0 0 0 / 70%)), ' +
-      'inset 0 0 0 1px light-dark(transparent, oklch(1 0 0 / 15%))',
+    "--shadow-low":
+      "0 2px 4px light-dark(oklch(0 0 0 / 5%), oklch(0 0 0 / 25%)), " +
+      "0 4px 8px light-dark(oklch(0 0 0 / 10%), oklch(0 0 0 / 40%)), " +
+      "inset 0 0 0 1px light-dark(transparent, oklch(1 0 0 / 8%))",
+    "--shadow-med":
+      "0 2px 4px light-dark(oklch(0 0 0 / 5%), oklch(0 0 0 / 35%)), " +
+      "0 4px 12px light-dark(oklch(0 0 0 / 10%), oklch(0 0 0 / 50%)), " +
+      "inset 0 0 0 1px light-dark(transparent, oklch(1 0 0 / 12%))",
+    "--shadow-high":
+      "0 4px 6px light-dark(oklch(0 0 0 / 10%), oklch(0 0 0 / 50%)), " +
+      "0 12px 24px light-dark(oklch(0 0 0 / 15%), oklch(0 0 0 / 70%)), " +
+      "inset 0 0 0 1px light-dark(transparent, oklch(1 0 0 / 15%))",
     // Selection / hover rings track the gold accent (was blue). light-dark so
     // the deeper light-mode gold reads on white and the bright gold reads on dark.
-    '--shadow-inset-hover': 'inset 0px 0px 0px 2px light-dark(oklch(0.64 0.14 66 / 0.4), oklch(0.81 0.128 78 / 0.4))',
-    '--shadow-inset-selected': 'inset 0px 0px 0px 2px light-dark(oklch(0.64 0.14 66 / 0.85), oklch(0.81 0.128 78 / 0.85))',
-    '--shadow-inset-success': 'inset 0px 0px 0px 2px #1981004D',
-    '--shadow-inset-warning': 'inset 0px 0px 0px 2px #ffce2f4D',
-    '--shadow-inset-error': 'inset 0px 0px 0px 2px #e33f4a4D',
+    "--shadow-inset-hover":
+      "inset 0px 0px 0px 2px light-dark(oklch(0.64 0.14 66 / 0.4), oklch(0.81 0.128 78 / 0.4))",
+    "--shadow-inset-selected":
+      "inset 0px 0px 0px 2px light-dark(oklch(0.64 0.14 66 / 0.85), oklch(0.81 0.128 78 / 0.85))",
+    "--shadow-inset-success": "inset 0px 0px 0px 2px #1981004D",
+    "--shadow-inset-warning": "inset 0px 0px 0px 2px #ffce2f4D",
+    "--shadow-inset-error": "inset 0px 0px 0px 2px #e33f4a4D",
   },
 
   components: {
@@ -376,9 +382,9 @@ export const neutralTheme = defineTheme({
     // uses the OKLCH red filled treatment.
     // =========================================================================
     button: {
-      'variant:destructive': {
-        backgroundColor: 'var(--color-error-muted)',  // locked pastel red bg
-        color: 'var(--color-error)',                  // locked T30 red — matches banner/input error text
+      "variant:destructive": {
+        backgroundColor: "var(--color-error-muted)", // locked pastel red bg
+        color: "var(--color-error)", // locked T30 red — matches banner/input error text
       },
     },
 
@@ -403,39 +409,39 @@ export const neutralTheme = defineTheme({
       //          T60+white fails AA-large (~2.7:1); T60+dark hits 6.6-7:1
       //          and tames the §4 vibration. Same dark-text-on-bright-bg
       //          treatment that warning yellow uses in both modes.
-      'variant:info': {
+      "variant:info": {
         // Light: T50 #0074e2 (palette saturated stop)
         // Dark : T60 stop from dark-mode tonal palette of source #0074e2
-        backgroundColor: 'light-dark(#0074e2, #6d9cfe)',
-        color: 'light-dark(#ffffff, #171717)',
+        backgroundColor: "light-dark(#0074e2, #6d9cfe)",
+        color: "light-dark(#ffffff, #171717)",
       },
-      'variant:neutral': {
+      "variant:neutral": {
         // Mirrors the gray categorical badge — same neutral chip treatment
         // (Neutral 200 light / semi-transparent white wash dark) sourced
         // from the gray hue tokens, so a single change at the token layer
         // updates both variants.
-        backgroundColor: 'var(--color-background-gray)',
-        color: 'var(--color-text-gray)',
+        backgroundColor: "var(--color-background-gray)",
+        color: "var(--color-text-gray)",
       },
-      'variant:success': {
+      "variant:success": {
         // Light: T45 #198100 (palette saturated stop)
         // Dark : T60 stop from dark-mode tonal palette of source #198100
-        backgroundColor: 'light-dark(#198100, #64af4c)',
-        color: 'light-dark(#ffffff, #171717)',
+        backgroundColor: "light-dark(#198100, #64af4c)",
+        color: "light-dark(#ffffff, #171717)",
       },
-      'variant:warning': {
+      "variant:warning": {
         // Yellow stays at the same hex in both modes — chroma reduction
         // is barely visible at T85, and dark text on yellow doesn't
         // suffer from the §4 vibration concern.
-        backgroundColor: '#ffce2f',
-        color: '#171717',
+        backgroundColor: "#ffce2f",
+        color: "#171717",
       },
-      'variant:error': {
+      "variant:error": {
         // Light: T55 #e33f4a (palette saturated stop)
         // Dark : T60 stop from dark-mode tonal palette of Tailwind red-600
         //        source #dc2626 (kept on H=27 alarm-red rather than coral)
-        backgroundColor: 'light-dark(#e33f4a, #ff705d)',
-        color: 'light-dark(#ffffff, #171717)',
+        backgroundColor: "light-dark(#e33f4a, #ff705d)",
+        color: "light-dark(#ffffff, #171717)",
       },
 
       // Categorical — bg + text reference the per-hue tokens, so behavior
@@ -445,45 +451,45 @@ export const neutralTheme = defineTheme({
       //          inverted from light to avoid the "pastel-in-both-modes"
       //          anti-pattern that makes locked light pastels glow on a
       //          dark body)
-      'variant:red': {
-        backgroundColor: 'var(--color-background-red)',
-        color: 'var(--color-text-red)',
+      "variant:red": {
+        backgroundColor: "var(--color-background-red)",
+        color: "var(--color-text-red)",
       },
-      'variant:orange': {
-        backgroundColor: 'var(--color-background-orange)',
-        color: 'var(--color-text-orange)',
+      "variant:orange": {
+        backgroundColor: "var(--color-background-orange)",
+        color: "var(--color-text-orange)",
       },
-      'variant:yellow': {
-        backgroundColor: 'var(--color-background-yellow)',
-        color: 'var(--color-text-yellow)',
+      "variant:yellow": {
+        backgroundColor: "var(--color-background-yellow)",
+        color: "var(--color-text-yellow)",
       },
-      'variant:green': {
-        backgroundColor: 'var(--color-background-green)',
-        color: 'var(--color-text-green)',
+      "variant:green": {
+        backgroundColor: "var(--color-background-green)",
+        color: "var(--color-text-green)",
       },
-      'variant:teal': {
-        backgroundColor: 'var(--color-background-teal)',
-        color: 'var(--color-text-teal)',
+      "variant:teal": {
+        backgroundColor: "var(--color-background-teal)",
+        color: "var(--color-text-teal)",
       },
-      'variant:cyan': {
-        backgroundColor: 'var(--color-background-cyan)',
-        color: 'var(--color-text-cyan)',
+      "variant:cyan": {
+        backgroundColor: "var(--color-background-cyan)",
+        color: "var(--color-text-cyan)",
       },
-      'variant:blue': {
-        backgroundColor: 'var(--color-background-blue)',
-        color: 'var(--color-text-blue)',
+      "variant:blue": {
+        backgroundColor: "var(--color-background-blue)",
+        color: "var(--color-text-blue)",
       },
-      'variant:purple': {
-        backgroundColor: 'var(--color-background-purple)',
-        color: 'var(--color-text-purple)',
+      "variant:purple": {
+        backgroundColor: "var(--color-background-purple)",
+        color: "var(--color-text-purple)",
       },
-      'variant:pink': {
-        backgroundColor: 'var(--color-background-pink)',
-        color: 'var(--color-text-pink)',
+      "variant:pink": {
+        backgroundColor: "var(--color-background-pink)",
+        color: "var(--color-text-pink)",
       },
-      'variant:gray': {
-        backgroundColor: 'var(--color-background-gray)',
-        color: 'var(--color-text-gray)',
+      "variant:gray": {
+        backgroundColor: "var(--color-background-gray)",
+        color: "var(--color-text-gray)",
       },
     },
 
@@ -502,30 +508,30 @@ export const neutralTheme = defineTheme({
     // Status overrides reference --color-text-{hue} so text/icon colors
     // stay in sync with the palette anchors automatically.
     banner: {
-      'status:info': {
-        backgroundColor: 'var(--color-background-blue)',
-        '--color-accent-muted': 'transparent',
-        '--color-text-primary': 'var(--color-text-blue)',
-        '--color-text-secondary': 'var(--color-text-blue)',
-        '--color-accent': 'var(--color-text-blue)',
+      "status:info": {
+        backgroundColor: "var(--color-background-blue)",
+        "--color-accent-muted": "transparent",
+        "--color-text-primary": "var(--color-text-blue)",
+        "--color-text-secondary": "var(--color-text-blue)",
+        "--color-accent": "var(--color-text-blue)",
       },
       // success/warning/error banner bgs come from --color-{X}-muted, which
       // already carries the correct light/dark tinted values. We only need
       // to redirect the text/icon to the palette colored stop.
-      'status:success': {
-        '--color-text-primary': 'var(--color-text-green)',
-        '--color-text-secondary': 'var(--color-text-green)',
-        '--color-success': 'var(--color-text-green)',
+      "status:success": {
+        "--color-text-primary": "var(--color-text-green)",
+        "--color-text-secondary": "var(--color-text-green)",
+        "--color-success": "var(--color-text-green)",
       },
-      'status:warning': {
-        '--color-text-primary': 'var(--color-text-yellow)',
-        '--color-text-secondary': 'var(--color-text-yellow)',
-        '--color-warning': 'var(--color-text-yellow)',
+      "status:warning": {
+        "--color-text-primary": "var(--color-text-yellow)",
+        "--color-text-secondary": "var(--color-text-yellow)",
+        "--color-warning": "var(--color-text-yellow)",
       },
-      'status:error': {
-        '--color-text-primary': 'var(--color-text-red)',
-        '--color-text-secondary': 'var(--color-text-red)',
-        '--color-error': 'var(--color-text-red)',
+      "status:error": {
+        "--color-text-primary": "var(--color-text-red)",
+        "--color-text-secondary": "var(--color-text-red)",
+        "--color-error": "var(--color-text-red)",
       },
     },
 
@@ -548,7 +554,7 @@ export const neutralTheme = defineTheme({
     // =========================================================================
     switch: {
       base: {
-        '--color-background-gray': 'var(--color-border-emphasized)',
+        "--color-background-gray": "var(--color-border-emphasized)",
       },
     },
 
@@ -559,26 +565,26 @@ export const neutralTheme = defineTheme({
         // the track is clearly darker than the body bg (Neutral T95 #f1f1f1)
         // and reads as a defined channel rather than blending in. Dark
         // mode inherits T35 #525252 — same one-step-lighter behavior.
-        '--color-background-muted': 'var(--color-border-emphasized)',
+        "--color-background-muted": "var(--color-border-emphasized)",
       },
       // Vivid stops match the filled semantic badge colors (info/success/
       // warning/error variants in the badge override above). Same hex
       // values; documented per role with palette provenance.
-      'variant:accent': {
+      "variant:accent": {
         // Gold accent (was blue T50), so an accent progress bar matches the CTA.
-        '--color-accent': 'light-dark(oklch(0.64 0.14 66), oklch(0.81 0.128 78))',
+        "--color-accent": "light-dark(oklch(0.64 0.14 66), oklch(0.81 0.128 78))",
       },
-      'variant:success': {
+      "variant:success": {
         // Green T45 saturated stop (= variant:success badge bg)
-        '--color-success': '#198100',
+        "--color-success": "#198100",
       },
-      'variant:warning': {
+      "variant:warning": {
         // Yellow T85 saturated stop (= variant:warning badge bg)
-        '--color-warning': '#ffce2f',
+        "--color-warning": "#ffce2f",
       },
-      'variant:error': {
+      "variant:error": {
         // Red T55 saturated stop (= variant:error badge bg)
-        '--color-error': '#e33f4a',
+        "--color-error": "#e33f4a",
       },
     },
 
@@ -587,7 +593,7 @@ export const neutralTheme = defineTheme({
     // =========================================================================
     card: {
       base: {
-        padding: 'var(--spacing-3)',
+        padding: "var(--spacing-3)",
       },
     },
 
@@ -596,7 +602,7 @@ export const neutralTheme = defineTheme({
     // =========================================================================
     section: {
       base: {
-        padding: 'var(--spacing-3)',
+        padding: "var(--spacing-3)",
       },
     },
 

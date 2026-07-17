@@ -21,7 +21,7 @@ export function TemplateEditorDialog({
 }: {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  template?: Template;
+  template?: Partial<Template>;
   onSaved: (template: Template, mode: "created" | "updated") => void;
 }) {
   const isEdit = Boolean(template?.id);
@@ -49,7 +49,7 @@ function TemplateForm({
   onCancel,
   onSaved,
 }: {
-  template?: Template;
+  template?: Partial<Template>;
   onCancel: () => void;
   onSaved: (template: Template, mode: "created" | "updated") => void;
 }) {
@@ -71,13 +71,20 @@ function TemplateForm({
     try {
       const payload = { name, subject, bodyHtml };
       const saved = isEdit
-        ? await apiRequest<Template>(`/api/templates/${template!.id}`, { method: "PATCH", json: payload })
+        ? await apiRequest<Template>(`/api/templates/${template!.id}`, {
+            method: "PATCH",
+            json: payload,
+          })
         : await apiRequest<Template>("/api/templates", { method: "POST", json: payload });
       onSaved(saved, isEdit ? "updated" : "created");
     } catch (err) {
       if (err instanceof ApiError && err.body.error === "unsupported_merge_fields") {
-        const fields = Array.isArray(err.body.fields) ? (err.body.fields as string[]).join(", ") : "";
-        setFormError(`Unsupported merge fields: ${fields}. Use only the fields from the Insert field menu.`);
+        const fields = Array.isArray(err.body.fields)
+          ? (err.body.fields as string[]).join(", ")
+          : "";
+        setFormError(
+          `Unsupported merge fields: ${fields}. Use only the fields from the Insert field menu.`,
+        );
       } else if (err instanceof ApiError && err.status === 422 && err.body.fields) {
         const f = err.body.fields as Record<string, string>;
         setNameError(f.name);
@@ -109,7 +116,9 @@ function TemplateForm({
         />
         <VStack gap={1} align="stretch">
           <HStack justify="between" align="center">
-            <Text size="sm" weight="medium">Subject</Text>
+            <Text size="sm" weight="medium">
+              Subject
+            </Text>
             <InsertFieldMenu value={subject} onChange={setSubject} containerRef={subjectRef} />
           </HStack>
           {/* display:contents wrapper hosts a DOM ref so InsertFieldMenu can read the caret,
@@ -126,10 +135,22 @@ function TemplateForm({
           </span>
         </VStack>
         <RichTextEditor label="Body" value={bodyHtml} onChange={setBodyHtml} />
-        {formError && <Banner status="error" container="card" title="Couldn't save template" description={formError} />}
+        {formError && (
+          <Banner
+            status="error"
+            container="card"
+            title="Couldn't save template"
+            description={formError}
+          />
+        )}
         <HStack justify="end" gap={2}>
           <Button label="Cancel" variant="ghost" onClick={onCancel} isDisabled={isSaving} />
-          <Button label={isEdit ? "Save changes" : "Create template"} variant="primary" type="submit" isLoading={isSaving} />
+          <Button
+            label={isEdit ? "Save changes" : "Create template"}
+            variant="primary"
+            type="submit"
+            isLoading={isSaving}
+          />
         </HStack>
       </VStack>
     </form>

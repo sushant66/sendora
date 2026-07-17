@@ -12,6 +12,7 @@ import { Selector } from "@astryxdesign/core/Selector";
 import { MultiSelector } from "@astryxdesign/core/MultiSelector";
 import { TextInput } from "@astryxdesign/core/TextInput";
 import { Banner } from "@astryxdesign/core/Banner";
+import { DropdownMenu } from "@astryxdesign/core/DropdownMenu";
 import { EmptyState } from "@astryxdesign/core/EmptyState";
 import { Skeleton } from "@astryxdesign/core/Skeleton";
 import { Table, proportional, type TableColumn } from "@astryxdesign/core/Table";
@@ -32,13 +33,28 @@ import { MERGE_FIELD_BY_TOKEN } from "@/lib/templates/fields";
 import { RichTextEditor } from "@/components/rich-text-editor/rich-text-editor";
 import { InsertFieldMenu } from "@/components/rich-text-editor/insert-field-menu";
 import { ContactFormDialog } from "@/components/contacts/contact-form-dialog";
-import { PlusIcon } from "@/components/app-icons";
+import { TemplateEditorDialog } from "@/components/templates/template-editor-dialog";
+import { PlusIcon, TemplatesIcon } from "@/components/app-icons";
 import { takePreselect } from "@/lib/compose/preselect";
 import { EmailPreview } from "./email-preview";
 
 type TestSendResult = { status: "sent" | "failed"; toEmail?: string; reason?: string };
 
 const PREVIEW_DEBOUNCE_MS = 350;
+
+// Plain, human phrasing for when a recruiter was last emailed. Recency is the
+// point of the recontact notice, so lead with "how long ago" and fall back to
+// an absolute date once it's far enough out that "N weeks ago" stops helping.
+function formatLastEmailed(value: string | Date): string {
+  const then = new Date(value);
+  const days = Math.round((Date.now() - then.getTime()) / 86_400_000);
+  if (days <= 0) return "earlier today";
+  if (days === 1) return "yesterday";
+  if (days < 7) return `${days} days ago`;
+  if (days < 14) return "last week";
+  if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
+  return `on ${then.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`;
+}
 
 export function ComposeView({ senderName = null }: { senderName?: string | null }) {
   const toast = useToast();
@@ -55,6 +71,15 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
   const [resumeId, setResumeId] = useState("");
   const [subject, setSubject] = useState("");
   const [bodyHtml, setBodyHtml] = useState("");
+  // The template the current draft was loaded from, so we can tell edited-since-load from pristine
+  // and offer the right save action. null when writing from scratch.
+  const [sourceTemplate, setSourceTemplate] = useState<Template | null>(null);
+  // The seed for the save/update dialog; non-null opens it. Carries current subject/body (+ id
+  // when updating in place) into the shared TemplateEditorDialog.
+  const [templateDraft, setTemplateDraft] = useState<Partial<Template> | null>(null);
+  // Brief in-context "Saved" confirmation shown where the save action was, right after a save.
+  const [savedFlash, setSavedFlash] = useState(false);
+  const savedFlashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [preview, setPreview] = useState<TemplatePreview | null>(null);
   const [recontact, setRecontact] = useState<RecontactInfo | null>(null);
@@ -63,7 +88,10 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
   const [profile, setProfile] = useState<SenderProfile | null>(null);
   const [isTesting, setIsTesting] = useState(false);
   // Pre-send missing-value gate (FR-016): populated when a send would leave a used field blank.
-  const [gate, setGate] = useState<{ report: MissingValueReport; preview: TemplatePreview | null } | null>(null);
+  const [gate, setGate] = useState<{
+    report: MissingValueReport;
+    preview: TemplatePreview | null;
+  } | null>(null);
   // Quick "email a recruiter you just got" flow: add a recipient inline without a detour to Contacts.
   const [addOpen, setAddOpen] = useState(false);
 
@@ -114,7 +142,10 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
           } else {
             // Every handed-off contact vanished before we got here (e.g. deleted). Don't leave
             // the user staring at a blank recipient field wondering why nothing was selected.
-            toast({ body: "Those recruiters could not be found. They may have been deleted.", type: "error" });
+            toast({
+              body: "Those recruiters could not be found. They may have been deleted.",
+              type: "error",
+            });
           }
         }
       } catch {
@@ -128,12 +159,39 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
 
   function onTemplate(id: string) {
     setTemplateId(id);
-    const t = templates.find((x) => x.id === id);
+    const t = templates.find((x) => x.id === id) ?? null;
+    setSourceTemplate(t);
     if (t) {
       setSubject(t.subject);
       setBodyHtml(t.bodyHtml);
     }
   }
+
+  // After a save/update from the dialog, adopt the saved template as the draft's source so the
+  // state settles back to "pristine" (save row hides) and further edits are measured against it.
+  function onTemplateSaved(saved: Template, mode: "created" | "updated") {
+    setTemplates((prev) =>
+      prev.some((t) => t.id === saved.id)
+        ? prev.map((t) => (t.id === saved.id ? saved : t))
+        : [...prev, saved],
+    );
+    setTemplateId(saved.id);
+    setSourceTemplate(saved);
+    setSubject(saved.subject);
+    setBodyHtml(saved.bodyHtml);
+    setTemplateDraft(null);
+    toast({ body: mode === "created" ? "Template saved." : "Template updated." });
+    // A quiet in-context confirmation at the moment of saving, then it settles back to nothing.
+    setSavedFlash(true);
+    if (savedFlashTimer.current) clearTimeout(savedFlashTimer.current);
+    savedFlashTimer.current = setTimeout(() => setSavedFlash(false), 1800);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (savedFlashTimer.current !== null) clearTimeout(savedFlashTimer.current);
+    };
+  }, []);
 
   // A recruiter added from inside compose joins the picker and is selected into the send at once,
   // so the user goes straight from "I just got their email" to sending, with no trip to Contacts.
@@ -145,10 +203,18 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
 
   const contactsById = useMemo(() => new Map(contacts.map((c) => [c.id, c])), [contacts]);
   // The recipient the live preview renders for: the chosen one if still selected, else the first.
-  const previewContactId = contactIds.includes(previewFor) ? previewFor : contactIds[0] ?? "";
+  const previewContactId = contactIds.includes(previewFor) ? previewFor : (contactIds[0] ?? "");
   const previewContact = contactsById.get(previewContactId);
-  const hasContent = subject.trim().length > 0 && bodyHtml.replace(/<[^>]*>/g, "").trim().length > 0;
+  const hasContent =
+    subject.trim().length > 0 && bodyHtml.replace(/<[^>]*>/g, "").trim().length > 0;
   const attachedResume = resumes.find((r) => r.id === resumeId) ?? null;
+  // Draft differs from the template it was loaded from (the editor only emits on real edits, so a
+  // freshly loaded template reads as pristine). Offer to save when there's content to keep and it's
+  // either unsaved (no source) or changed.
+  const isDirty =
+    sourceTemplate !== null &&
+    (subject !== sourceTemplate.subject || bodyHtml !== sourceTemplate.bodyHtml);
+  const canSaveTemplate = hasContent && (sourceTemplate === null || isDirty);
 
   // Guards against out-of-order preview responses clobbering a newer request.
   const previewSeq = useRef(0);
@@ -170,7 +236,10 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
   }, []);
 
   useEffect(() => {
-    const t = setTimeout(() => void runPreview(previewContactId, subject, bodyHtml), PREVIEW_DEBOUNCE_MS);
+    const t = setTimeout(
+      () => void runPreview(previewContactId, subject, bodyHtml),
+      PREVIEW_DEBOUNCE_MS,
+    );
     return () => clearTimeout(t);
   }, [previewContactId, subject, bodyHtml, runPreview]);
 
@@ -190,15 +259,24 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
         /* leave prior info; render filters by current selection */
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [contactIds]);
 
-  const alreadyContacted = (recontact?.previouslyContacted ?? []).filter((p) => contactIds.includes(p.contactId));
+  const alreadyContacted = (recontact?.previouslyContacted ?? []).filter((p) =>
+    contactIds.includes(p.contactId),
+  );
 
   // Select-all makes it easy to pick more than a single send allows (FR / SendRequestSchema cap),
   // so guard it here with clear feedback instead of letting the send fail server-side.
   const overRecipientLimit = contactIds.length > MAX_SEND_RECIPIENTS;
-  const canSend = contactIds.length > 0 && hasContent && account?.connected === true && !isSending && !overRecipientLimit;
+  const canSend =
+    contactIds.length > 0 &&
+    hasContent &&
+    account?.connected === true &&
+    !isSending &&
+    !overRecipientLimit;
   const isBulk = contactIds.length > 1;
 
   const selectedContacts = useMemo(
@@ -209,7 +287,13 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
   /** Send-time gate (FR-016): if a used field would resolve empty, show how it reads and
    *  require an explicit confirm; otherwise send straight through. */
   async function attemptSend() {
-    const report = computeMissingValues({ subject, bodyHtml, contacts: selectedContacts, profile, accountName: senderName });
+    const report = computeMissingValues({
+      subject,
+      bodyHtml,
+      contacts: selectedContacts,
+      profile,
+      accountName: senderName,
+    });
     if (!report.hasMissing) {
       void send();
       return;
@@ -272,11 +356,18 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
     try {
       const summary = await apiRequest<SendSummary>("/api/send", {
         method: "POST",
-        json: { contactIds, templateId: templateId || undefined, override: { subject, bodyHtml }, resumeId: resumeId || undefined },
+        json: {
+          contactIds,
+          templateId: templateId || undefined,
+          override: { subject, bodyHtml },
+          resumeId: resumeId || undefined,
+        },
       });
       setResult(summary);
-      if (summary.failed === 0) toast({ body: `Sent to ${summary.sent} recruiter${summary.sent === 1 ? "" : "s"}.` });
-      else if (summary.sent > 0) toast({ body: `Sent ${summary.sent}, ${summary.failed} failed.`, type: "error" });
+      if (summary.failed === 0)
+        toast({ body: `Sent to ${summary.sent} recruiter${summary.sent === 1 ? "" : "s"}.` });
+      else if (summary.sent > 0)
+        toast({ body: `Sent ${summary.sent}, ${summary.failed} failed.`, type: "error" });
       else toast({ body: "No emails were sent.", type: "error" });
     } catch (err) {
       if (err instanceof ApiError && err.body.error === "no_active_account") {
@@ -292,7 +383,10 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
         toast({ body: "That resume could not be found. Pick another.", type: "error" });
       } else if (err instanceof ApiError && err.status === 422) {
         const fieldMsg = err.body.fields ? Object.values(err.body.fields)[0] : undefined;
-        toast({ body: fieldMsg ?? "Add recipients, a subject, and a body before sending.", type: "error" });
+        toast({
+          body: fieldMsg ?? "Add recipients, a subject, and a body before sending.",
+          type: "error",
+        });
       } else {
         toast({ body: "Something went wrong sending.", type: "error" });
       }
@@ -347,32 +441,41 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
     <VStack gap={5}>
       <VStack gap={1}>
         <Heading level={1}>Compose</Heading>
-        <Text color="secondary">Pick recruiters and a template, personalize it, and send individually from your inbox.</Text>
+        <Text color="secondary">
+          Pick recruiters and a template, personalize it, and send individually from your inbox.
+        </Text>
       </VStack>
 
       {account && !account.connected && (
         <Banner
           status="warning"
-          container="section"
+          container="card"
           title="Connect your Gmail to send"
           description="Outreach sends from your own inbox. Connect Gmail to enable sending."
-          endContent={<Button as={Link} href="/settings/email-account" label="Connect Gmail" variant="primary" />}
+          endContent={
+            <Button
+              as={Link}
+              href="/settings/email-account"
+              label="Connect Gmail"
+              variant="primary"
+            />
+          }
         />
       )}
 
       {alreadyContacted.length > 0 && !result && (
         <Banner
           status="warning"
-          container="section"
+          container="card"
           title={
             alreadyContacted.length === 1
-              ? "You've already emailed this recruiter"
-              : `You've already emailed ${alreadyContacted.length} of these recruiters`
+              ? "You've emailed this recruiter before"
+              : `You've emailed ${alreadyContacted.length} of these recruiters before`
           }
           description={alreadyContacted
             .map((p) => {
               const name = contactsById.get(p.contactId)?.name ?? "A recruiter";
-              return `${name} (last on ${new Date(p.lastSentAt).toLocaleDateString()})`;
+              return `${name} (last emailed ${formatLastEmailed(p.lastSentAt)})`;
             })
             .join("; ")}
         />
@@ -385,8 +488,12 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
           <VStack gap={1} align="stretch">
             <HStack justify="between" align="center">
               <HStack gap={1} align="center">
-                <Text size="sm" weight="medium">Recipients</Text>
-                <Text size="sm" color="secondary">· Required</Text>
+                <Text size="sm" weight="medium">
+                  Recipients
+                </Text>
+                <Text size="sm" color="secondary">
+                  · Required
+                </Text>
               </HStack>
               <Button
                 label="New recruiter"
@@ -405,19 +512,88 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
               hasClear
               hasSelectAll
               placeholder="Choose one or more recruiters"
-              options={contacts.map((c) => ({ value: c.id, label: c.company ? `${c.name} · ${c.company}` : c.name }))}
+              options={contacts.map((c) => ({
+                value: c.id,
+                label: c.company ? `${c.name} · ${c.company}` : c.name,
+              }))}
               value={contactIds}
               onChange={setContactIds}
             />
           </VStack>
-          <Selector
-            label="Template"
-            hasSearch
-            placeholder="Start from a template (optional)"
-            options={templates.map((t) => ({ value: t.id, label: t.kind === "system" ? `${t.name} (starter)` : t.name }))}
-            value={templateId}
-            onChange={onTemplate}
-          />
+          <VStack gap={1} align="stretch">
+            {/* Save/update lives here, beside the Template label, mirroring the Subject row's
+                "Insert field" action, so template management stays out of the send toolbar below.
+                minHeight reserves the row so the picker doesn't jump when the action appears. */}
+            <HStack justify="between" align="center" style={{ minHeight: "var(--spacing-8)" }}>
+              <Text size="sm" weight="medium">
+                Template
+              </Text>
+              {savedFlash ? (
+                <HStack gap={1} align="center">
+                  <Text size="sm" weight="medium" style={{ color: "var(--color-text-green)" }}>
+                    ✓
+                  </Text>
+                  <Text size="sm" color="secondary">
+                    Saved
+                  </Text>
+                </HStack>
+              ) : canSaveTemplate ? (
+                sourceTemplate?.kind === "custom" ? (
+                  <DropdownMenu
+                    button={{
+                      label: "Save",
+                      variant: "secondary",
+                      size: "sm",
+                      isDisabled: isSending,
+                    }}
+                    menuWidth={220}
+                    items={[
+                      {
+                        label: `Update '${sourceTemplate.name}'`,
+                        onClick: () => setTemplateDraft({ ...sourceTemplate, subject, bodyHtml }),
+                      },
+                      {
+                        label: "Save as a new template",
+                        onClick: () =>
+                          setTemplateDraft({
+                            name: `Copy of ${sourceTemplate.name}`,
+                            subject,
+                            bodyHtml,
+                          }),
+                      },
+                    ]}
+                  />
+                ) : (
+                  <Button
+                    label={sourceTemplate ? "Save as new template" : "Save as template"}
+                    variant="secondary"
+                    size="sm"
+                    icon={<TemplatesIcon />}
+                    onClick={() =>
+                      setTemplateDraft({
+                        name: sourceTemplate ? `Copy of ${sourceTemplate.name}` : "",
+                        subject,
+                        bodyHtml,
+                      })
+                    }
+                    isDisabled={isSending}
+                  />
+                )
+              ) : null}
+            </HStack>
+            <Selector
+              label="Template"
+              isLabelHidden
+              hasSearch
+              placeholder="Start from a template (optional)"
+              options={templates.map((t) => ({
+                value: t.id,
+                label: t.kind === "system" ? `${t.name} (starter)` : t.name,
+              }))}
+              value={templateId}
+              onChange={onTemplate}
+            />
+          </VStack>
           <Selector
             label="Resume"
             hasSearch
@@ -429,14 +605,27 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
           />
           <VStack gap={1} align="stretch">
             <HStack justify="between" align="center">
-              <Text size="sm" weight="medium">Subject</Text>
+              <Text size="sm" weight="medium">
+                Subject
+              </Text>
               <InsertFieldMenu value={subject} onChange={setSubject} containerRef={subjectRef} />
             </HStack>
             <span ref={subjectRef} style={{ display: "contents" }}>
-              <TextInput label="Subject" isLabelHidden value={subject} onChange={setSubject} placeholder="Subject line" />
+              <TextInput
+                label="Subject"
+                isLabelHidden
+                value={subject}
+                onChange={setSubject}
+                placeholder="Subject line"
+              />
             </span>
           </VStack>
-          <RichTextEditor key={templateId || "blank"} label="Body" value={bodyHtml} onChange={setBodyHtml} />
+          <RichTextEditor
+            key={templateId || "blank"}
+            label="Body"
+            value={bodyHtml}
+            onChange={setBodyHtml}
+          />
           <HStack justify="between" align="center" gap={3}>
             <Text color={overRecipientLimit ? "primary" : "secondary"} size="sm">
               {contactIds.length === 0
@@ -495,7 +684,10 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
           {isBulk && (
             <Selector
               label="Preview for"
-              options={contactIds.map((id) => ({ value: id, label: contactsById.get(id)?.name ?? id }))}
+              options={contactIds.map((id) => ({
+                value: id,
+                label: contactsById.get(id)?.name ?? id,
+              }))}
               value={previewContactId}
               onChange={setPreviewFor}
             />
@@ -505,13 +697,24 @@ export function ComposeView({ senderName = null }: { senderName?: string | null 
             fromEmail={account?.emailAddress}
             toEmail={previewContact?.email}
             isEmpty={contactIds.length === 0 || !hasContent}
-            attachedResume={attachedResume ? { label: attachedResume.label, fileName: attachedResume.fileName } : null}
+            attachedResume={
+              attachedResume
+                ? { label: attachedResume.label, fileName: attachedResume.fileName }
+                : null
+            }
             canCopy
           />
         </VStack>
       </Grid>
 
       <ContactFormDialog isOpen={addOpen} onOpenChange={setAddOpen} onSaved={onRecruiterAdded} />
+
+      <TemplateEditorDialog
+        isOpen={templateDraft !== null}
+        onOpenChange={(open) => !open && setTemplateDraft(null)}
+        template={templateDraft ?? undefined}
+        onSaved={onTemplateSaved}
+      />
     </VStack>
   );
 }
@@ -544,7 +747,13 @@ function MissingValueGate({
 }) {
   const recipientMissingTokens = [...new Set(report.affected.flatMap((a) => a.missing))];
   return (
-    <Dialog isOpen onOpenChange={(open) => !open && onCancel()} purpose="required" width={560} maxHeight="85vh">
+    <Dialog
+      isOpen
+      onOpenChange={(open) => !open && onCancel()}
+      purpose="required"
+      width={560}
+      maxHeight="85vh"
+    >
       <DialogHeader
         title="Some fields will be left blank"
         subtitle="These emails will still send. Here is how one of them reads so you can decide."
@@ -573,11 +782,22 @@ function MissingValueGate({
           <Text size="sm" weight="medium">
             How one of these emails reads
           </Text>
-          <EmailPreview preview={preview} fromEmail={fromEmail} toEmail={toEmail} isEmpty={!preview} hideWarnings />
+          <EmailPreview
+            preview={preview}
+            fromEmail={fromEmail}
+            toEmail={toEmail}
+            isEmpty={!preview}
+            hideWarnings
+          />
         </VStack>
 
         <HStack justify="end" gap={2}>
-          <Button label="Go back and edit" variant="ghost" onClick={onCancel} isDisabled={isSending} />
+          <Button
+            label="Go back and edit"
+            variant="ghost"
+            onClick={onCancel}
+            isDisabled={isSending}
+          />
           <Button label="Send anyway" variant="primary" onClick={onConfirm} isLoading={isSending} />
         </HStack>
       </VStack>
@@ -608,11 +828,14 @@ function SendResultPanel({
       key: "recipient",
       header: "Recipient",
       width: proportional(2),
-      renderCell: (r) => (
-        <Text>{contactsById.get(r.contactId)?.name ?? r.recipientEmail}</Text>
-      ),
+      renderCell: (r) => <Text>{contactsById.get(r.contactId)?.name ?? r.recipientEmail}</Text>,
     },
-    { key: "email", header: "Email", width: proportional(2), renderCell: (r) => <Text color="secondary">{r.recipientEmail}</Text> },
+    {
+      key: "email",
+      header: "Email",
+      width: proportional(2),
+      renderCell: (r) => <Text color="secondary">{r.recipientEmail}</Text>,
+    },
     {
       key: "status",
       header: "Result",
@@ -620,7 +843,9 @@ function SendResultPanel({
       renderCell: (r) => (
         <HStack gap={2} align="center">
           <StatusDot variant={r.status === "sent" ? "success" : "error"} label={r.status} />
-          <Text size="sm" color="secondary">{r.status === "sent" ? "Sent" : r.reason ?? "Failed"}</Text>
+          <Text size="sm" color="secondary">
+            {r.status === "sent" ? "Sent" : (r.reason ?? "Failed")}
+          </Text>
         </HStack>
       ),
     },
@@ -638,11 +863,21 @@ function SendResultPanel({
             ? `Sent to ${result.sent} recruiter${result.sent === 1 ? "" : "s"}`
             : `Sent ${result.sent} of ${result.total}, ${result.failed} failed`
         }
-        description={allSent ? "Each recruiter received their own personalized email." : "Successful sends were kept; failed ones are listed below."}
+        description={
+          allSent
+            ? "Each recruiter received their own personalized email."
+            : "Successful sends were kept; failed ones are listed below."
+        }
         endContent={<Button as={Link} href="/history" label="View history" variant="secondary" />}
       />
       {result.total > 1 && (
-        <Table data={result.results} columns={columns} idKey="contactId" density="compact" dividers="rows" />
+        <Table
+          data={result.results}
+          columns={columns}
+          idKey="contactId"
+          density="compact"
+          dividers="rows"
+        />
       )}
     </VStack>
   );
