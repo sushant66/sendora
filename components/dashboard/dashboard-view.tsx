@@ -36,7 +36,14 @@ type Step = {
   optional?: boolean;
 };
 
-export function DashboardView({ user, account, hasContacts, recent, hasSent, hasProfile = false }: Props) {
+export function DashboardView({
+  user,
+  account,
+  hasContacts,
+  recent,
+  hasSent,
+  hasProfile = false,
+}: Props) {
   const expired = account.status === "expired";
   const firstName = user.name?.trim().split(/\s+/)[0] ?? null;
 
@@ -60,7 +67,8 @@ export function DashboardView({ user, account, hasContacts, recent, hasSent, has
     },
     {
       title: "Preview and send your first email",
-      description: "Pick a starter, preview the real rendered email (no inbox needed yet), then send. You'll connect Gmail at this step.",
+      description:
+        "Pick a starter, preview the real rendered email (no inbox needed yet), then send. You'll connect Gmail at this step.",
       done: hasSent,
       href: "/compose",
       cta: "Compose email",
@@ -71,9 +79,7 @@ export function DashboardView({ user, account, hasContacts, recent, hasSent, has
   const allSetUp = steps.every((s) => s.done || s.optional);
   const activeIndex = steps.findIndex((s) => !s.done && !s.optional);
   const next =
-    allSetUp || activeIndex < 0
-      ? { href: "/compose", cta: "Compose email" }
-      : steps[activeIndex]!;
+    allSetUp || activeIndex < 0 ? { href: "/compose", cta: "Compose email" } : steps[activeIndex]!;
   const doneCount = steps.filter((s) => s.done).length;
 
   return (
@@ -82,9 +88,7 @@ export function DashboardView({ user, account, hasContacts, recent, hasSent, has
       <HStack justify="between" align="start" gap={4}>
         <VStack gap={2}>
           <VStack gap={1}>
-            <Heading level={1}>
-              {firstName ? `Welcome back, ${firstName}` : "Welcome back"}
-            </Heading>
+            <Heading level={1}>{firstName ? `Welcome back, ${firstName}` : "Welcome back"}</Heading>
             <Text color="secondary">
               {allSetUp
                 ? "You're all set. Compose your next round of outreach whenever you're ready."
@@ -210,10 +214,11 @@ function ActionIcon({ glyph: Glyph }: { glyph: (props: SVGProps<SVGSVGElement>) 
 }
 
 function ConnectionPill({ account }: { account: AccountStatus }) {
+  const name = account.provider === "yahoo" ? "Yahoo" : "Gmail";
   if (account.connected) {
     return (
       <HStack gap={2} align="center">
-        <StatusDot variant="success" label="Gmail connected" />
+        <StatusDot variant="success" label={`${name} connected`} />
         <Text size="sm" color="secondary">
           Sending from {account.emailAddress}
         </Text>
@@ -223,9 +228,9 @@ function ConnectionPill({ account }: { account: AccountStatus }) {
   if (account.status === "expired") {
     return (
       <HStack gap={2} align="center">
-        <StatusDot variant="warning" label="Gmail authorization expired" />
+        <StatusDot variant="warning" label={`${name} authorization expired`} />
         <Text size="sm" color="secondary">
-          Gmail needs reconnecting
+          {name} needs reconnecting
         </Text>
       </HStack>
     );
@@ -316,7 +321,10 @@ function StepMarker({ done, active, n }: { done: boolean; active: boolean; n: nu
   );
 }
 
-const STATUS: Record<HistoryRecord["status"], { variant: "success" | "error" | "neutral"; label: string }> = {
+const STATUS: Record<
+  HistoryRecord["status"],
+  { variant: "success" | "error" | "neutral"; label: string }
+> = {
   sent: { variant: "success", label: "Sent" },
   failed: { variant: "error", label: "Failed" },
   pending: { variant: "neutral", label: "Pending" },
@@ -346,7 +354,11 @@ function RecentActivity({ recent }: { recent: HistoryRecord[] }) {
               <VStack key={item.id} gap={0}>
                 <HStack gap={3} align="center" justify="between" paddingBlock={3}>
                   <HStack gap={3} align="center" style={{ minWidth: 0 }}>
-                    <StatusDot variant={s.variant} label={s.label} tooltip={item.failureReason ?? undefined} />
+                    <StatusDot
+                      variant={s.variant}
+                      label={s.label}
+                      tooltip={item.failureReason ?? undefined}
+                    />
                     <VStack gap={0} style={{ minWidth: 0 }}>
                       <Text weight="medium" maxLines={1}>
                         {item.recipientEmail}

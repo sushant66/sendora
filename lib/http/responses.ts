@@ -30,6 +30,10 @@ export function conflict(error: string): NextResponse {
   return NextResponse.json({ error }, { status: 409 });
 }
 
+export function tooManyRequests(): NextResponse {
+  return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+}
+
 /** 422 for unsupported merge tokens, matching contracts/http-api.md (FR-011). */
 export function unsupportedMergeFields(tokens: string[]): NextResponse {
   return NextResponse.json(

@@ -6,9 +6,11 @@ import { resendRecord } from "@/lib/send/service";
 
 type Ctx = { params: Promise<{ id: string }> };
 
+export const runtime = "nodejs"; // SMTP (Yahoo) send needs Node net/tls
+
 /**
  * POST /api/history/:id/resend — resend one record's snapshot to the same recipient (US5).
- * 404 if not owned; 409 `no_active_account` if no Gmail is connected.
+ * 404 if not owned; 409 `no_active_account` if no active account is connected.
  */
 export const POST = route(async (_req: NextRequest, ctx: Ctx) => {
   const user = await requireUser();

@@ -9,6 +9,7 @@ vi.mock("@/lib/email/account-service", () => ({
 }));
 vi.mock("@/lib/auth/session", () => ({ requireUser: vi.fn(), getCurrentUser: vi.fn() }));
 
+import type { NextRequest } from "next/server";
 import * as accountService from "@/lib/email/account-service";
 import { requireUser } from "@/lib/auth/session";
 import { GET, DELETE } from "@/app/api/email-account/route";
@@ -31,7 +32,12 @@ describe("GET /api/email-account", () => {
     });
     const res = await GET();
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ connected: true, provider: "gmail", emailAddress: "u1@x.com", status: "active" });
+    expect(await res.json()).toEqual({
+      connected: true,
+      provider: "gmail",
+      emailAddress: "u1@x.com",
+      status: "active",
+    });
   });
 
   it("reports not connected when there is no account", async () => {
@@ -43,18 +49,29 @@ describe("GET /api/email-account", () => {
 
 describe("POST /api/email-account/connect", () => {
   it("returns the Google authorize URL", async () => {
-    vi.mocked(accountService.buildConnectUrl).mockReturnValue("https://accounts.google.com/o/oauth2/auth?scope=gmail.send");
-    const res = await CONNECT();
+    vi.mocked(accountService.buildConnectUrl).mockReturnValue(
+      "https://accounts.google.com/o/oauth2/auth?scope=gmail.send",
+    );
+    const req = new Request("http://x/api/email-account/connect", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ provider: "gmail" }),
+    }) as unknown as NextRequest;
+    const res = await CONNECT(req);
     expect(res.status).toBe(200);
     expect((await res.json()).authorizeUrl).toContain("gmail.send");
+    expect(accountService.buildConnectUrl).toHaveBeenCalledWith("u1", "gmail");
   });
 });
 
 describe("DELETE /api/email-account", () => {
   it("disconnects and returns 204", async () => {
     vi.mocked(accountService.disconnect).mockResolvedValue(undefined);
-    const res = await DELETE();
+    const req = new Request("http://x/api/email-account?provider=gmail", {
+      method: "DELETE",
+    }) as unknown as NextRequest;
+    const res = await DELETE(req);
     expect(res.status).toBe(204);
-    expect(accountService.disconnect).toHaveBeenCalledWith("u1");
+    expect(accountService.disconnect).toHaveBeenCalledWith("u1", "gmail");
   });
 });

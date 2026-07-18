@@ -5,10 +5,10 @@ import { completeConnection, verifyState } from "@/lib/email/account-service";
 import { logger } from "@/lib/observability/logger";
 
 /**
- * GET /api/email-account/callback — Google OAuth redirect target for the gmail.send grant.
- * Session-authenticated; verifies the signed `state`, exchanges the code, and redirects
- * back to the settings page with a status. Errors redirect with an error flag (never a
- * raw 500), so the user always lands somewhere actionable.
+ * GET /api/email-account/callback — OAuth redirect target for a redirect-based provider (Gmail).
+ * Session-authenticated; verifies the signed `state` (which carries the provider), exchanges the
+ * code, and redirects back to the settings page with a status. Errors redirect with an error flag
+ * (never a raw 500), so the user always lands somewhere actionable.
  */
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const settings = new URL("/settings/email-account", getEnv().APP_URL);
@@ -19,14 +19,15 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const error = searchParams.get("error");
   const code = searchParams.get("code");
   const state = searchParams.get("state");
+  const verified = state ? verifyState(state, user.id) : { valid: false as const };
 
-  if (error || !code || !state || !verifyState(state, user.id)) {
+  if (error || !code || !verified.valid || !verified.provider) {
     settings.searchParams.set("error", error ?? "connect_failed");
     return NextResponse.redirect(settings);
   }
 
   try {
-    await completeConnection(user.id, user.email, code);
+    await completeConnection(user.id, verified.provider, code, user.email);
     settings.searchParams.set("connected", "1");
   } catch (err) {
     logger.error("email-account connect failed", { error: String(err) });

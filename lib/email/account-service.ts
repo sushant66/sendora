@@ -1,125 +1,314 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { google } from "googleapis";
 import { and, eq } from "drizzle-orm";
-import { db as defaultDb, type Db } from "@/lib/db/client";
+import { db as defaultDb, runAtomic, type Db } from "@/lib/db/client";
 import { connectedEmailAccounts, type ConnectedEmailAccountRow } from "@/lib/db/schema";
 import { getEnv } from "@/lib/validation/env";
-import { ConflictError, ForbiddenError } from "@/lib/errors";
+import { ConflictError } from "@/lib/errors";
 import { encryptToken, decryptToken } from "@/lib/crypto/tokens";
+import { connectorFor, availableProviders } from "./connectors";
 import type { ProviderCredentials, ProviderKey } from "./provider";
-import type { AccountStatus } from "./types";
+import type { AccountStatus, ConnectedAccount, EmailAccountsStatus } from "./types";
 
 /**
  * Connected email account service (User Story 2, FR-019/a/b).
  *
- * Self-contained OAuth for the narrow `gmail.send` scope: connect returns a Google consent
- * URL; the callback exchanges the code and stores the refresh token encrypted at rest. The
- * account email is the signed-in user's own Google address (send-only scope grants no
- * profile read). Sending requires an `active` account (FR-019a); a reauth failure flips it
- * to `expired` (FR-019b).
+ * Self-contained OAuth for a narrow send scope, per provider (Gmail via REST, Yahoo via SMTP).
+ * Connect returns a provider consent URL; the callback exchanges the code and stores the refresh
+ * token encrypted at rest. A user may connect several providers, but exactly one is the selected
+ * sender (`isActive`); sending uses that account (FR-019a), and a reauth failure flips it to
+ * `expired` (FR-019b). Provider-specific work is delegated to the connector seam.
  */
 
-const PROVIDER: ProviderKey = "gmail";
-const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.send";
+// ---- Signed OAuth state (CSRF guard, carries the provider) --------------------------------
 
-function redirectUri(): string {
-  return `${getEnv().APP_URL}/api/email-account/callback`;
+/** `state = ${userId}.${provider}.${mac}`, where the MAC covers userId+provider. */
+export function signState(userId: string, provider: ProviderKey): string {
+  const mac = createHmac("sha256", getEnv().AUTH_SECRET)
+    .update(`${userId}.${provider}`)
+    .digest("base64url");
+  return `${userId}.${provider}.${mac}`;
 }
 
-function oauthClient() {
-  const env = getEnv();
-  return new google.auth.OAuth2(env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET, redirectUri());
-}
-
-/** Sign the OAuth `state` so the callback can verify it belongs to this user (CSRF guard). */
-function signState(userId: string): string {
-  const mac = createHmac("sha256", getEnv().AUTH_SECRET).update(userId).digest("base64url");
-  return `${userId}.${mac}`;
-}
-export function verifyState(state: string, userId: string): boolean {
-  const expected = signState(userId);
+export function verifyState(
+  state: string,
+  userId: string,
+): { valid: boolean; provider?: ProviderKey } {
+  const parts = state.split(".");
+  if (parts.length !== 3) return { valid: false };
+  const [stateUserId, provider] = parts;
+  if (stateUserId !== userId) return { valid: false };
+  const expected = signState(userId, provider as ProviderKey);
   const a = Buffer.from(state);
   const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
+  const valid = a.length === b.length && timingSafeEqual(a, b);
+  return valid ? { valid, provider: provider as ProviderKey } : { valid: false };
 }
 
-export async function getAccountStatus(userId: string, db: Db = defaultDb): Promise<AccountStatus> {
-  const [row] = await db
-    .select()
-    .from(connectedEmailAccounts)
-    .where(and(eq(connectedEmailAccounts.userId, userId), eq(connectedEmailAccounts.provider, PROVIDER)))
-    .limit(1);
-  if (!row || row.status === "revoked") return { connected: false };
-  return {
-    connected: row.status === "active",
-    provider: "gmail",
-    emailAddress: row.emailAddress,
-    status: row.status as AccountStatus["status"],
-  };
+// ---- Connect / callback -------------------------------------------------------------------
+
+/** Begin an OAuth connect — the consent URL for a redirect-based provider (Gmail). */
+export function buildConnectUrl(userId: string, provider: ProviderKey): string {
+  const connector = connectorFor(provider);
+  if (connector.method !== "oauth") {
+    throw new ConflictError("provider_unavailable", `${provider} does not connect by OAuth.`);
+  }
+  if (!connector.isConfigured()) {
+    throw new ConflictError("provider_unavailable", `${provider} is not configured for sending.`);
+  }
+  return connector.authorizeUrl(signState(userId, provider));
 }
 
-export function buildConnectUrl(userId: string): string {
-  return oauthClient().generateAuthUrl({
-    access_type: "offline",
-    prompt: "consent", // force a refresh_token every time
-    scope: [GMAIL_SCOPE],
-    include_granted_scopes: true,
-    state: signState(userId),
-    login_hint: undefined,
+/** Complete an OAuth connect: exchange the code (redirect provider) and store the account. */
+export async function completeConnection(
+  userId: string,
+  provider: ProviderKey,
+  code: string,
+  fallbackEmail: string,
+  db: Db = defaultDb,
+): Promise<void> {
+  const connector = connectorFor(provider);
+  if (connector.method !== "oauth")
+    throw new ConflictError("provider_unavailable", `${provider} does not use OAuth.`);
+  const tokens = await connector.exchangeCode(code);
+  if (!tokens.refreshToken)
+    throw new ConflictError("reconnect_required", "No refresh token was returned.");
+  const emailAddress = tokens.emailAddress ?? fallbackEmail;
+  if (!emailAddress)
+    throw new ConflictError("email_unresolved", "Could not determine the mailbox address.");
+
+  await persistConnection(db, {
+    userId,
+    provider,
+    emailAddress,
+    secret: tokens.refreshToken,
+    accessToken: tokens.accessToken,
+    expiresAt: tokens.expiresAt,
+    scopes: tokens.scopes,
   });
 }
 
-/** Exchange the authorization code and upsert the connected account (status active). */
-export async function completeConnection(
+/**
+ * Complete a credentials connect (Yahoo app password): verify the submitted email + secret,
+ * then store the account. The secret is kept in the encrypted-secret column and used as the
+ * SMTP password at send time.
+ */
+export async function connectWithCredentials(
   userId: string,
-  emailAddress: string,
-  code: string,
+  provider: ProviderKey,
+  email: string,
+  secret: string,
   db: Db = defaultDb,
 ): Promise<void> {
-  const { tokens } = await oauthClient().getToken(code);
-  if (!tokens.refresh_token) {
-    // Google omits the refresh token if the user previously consented without revoking.
-    throw new ConflictError("reconnect_required", "Google did not return a refresh token. Revoke access and reconnect.");
+  const connector = connectorFor(provider);
+  if (connector.method !== "credentials") {
+    throw new ConflictError(
+      "provider_unavailable",
+      `${provider} does not connect with a password.`,
+    );
   }
-  const scopes = (tokens.scope ?? GMAIL_SCOPE).split(" ").filter(Boolean);
-  if (!scopes.includes(GMAIL_SCOPE)) throw new ForbiddenError("the gmail.send permission was not granted");
+  await connector.verify(email, secret);
+  await persistConnection(db, {
+    userId,
+    provider,
+    emailAddress: email,
+    secret,
+    accessToken: null,
+    scopes: [],
+  });
+}
 
+type PersistArgs = {
+  userId: string;
+  provider: ProviderKey;
+  emailAddress: string;
+  /** Long-lived secret: an OAuth refresh token or an app password. */
+  secret: string;
+  accessToken?: string | null;
+  expiresAt?: Date;
+  scopes?: string[];
+};
+
+/**
+ * Upsert a connected account and maintain the single-active invariant: the account becomes the
+ * active sender only if the user has no other active account (else it stays connected, inactive),
+ * unless it already is the active account (self-reconnect keeps it active).
+ */
+async function persistConnection(db: Db, args: PersistArgs): Promise<void> {
+  const { userId, provider, emailAddress } = args;
+  const existing = await db
+    .select()
+    .from(connectedEmailAccounts)
+    .where(eq(connectedEmailAccounts.userId, userId));
+  // Only a *healthy* account holds the active slot: an expired account keeps `isActive` (so
+  // reconnect restores it) but must not block a fresh, sendable account from becoming active.
+  const active = existing.find((r) => r.isActive && r.status === "active");
+  const isSelf = (r: ConnectedEmailAccountRow) =>
+    r.provider === provider && r.emailAddress === emailAddress;
+  const isActive = !active || isSelf(active);
+
+  const now = new Date();
   const values = {
     userId,
-    provider: PROVIDER,
+    provider,
     emailAddress,
-    accessToken: tokens.access_token ? encryptToken(tokens.access_token) : null,
-    refreshToken: encryptToken(tokens.refresh_token),
-    tokenExpiresAt: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
-    scopes,
+    accessToken: args.accessToken ? encryptToken(args.accessToken) : null,
+    refreshToken: encryptToken(args.secret),
+    tokenExpiresAt: args.expiresAt ?? null,
+    scopes: args.scopes ?? [],
     status: "active" as const,
-    connectedAt: new Date(),
-    updatedAt: new Date(),
+    isActive,
+    connectedAt: now,
+    updatedAt: now,
   };
 
   await db
     .insert(connectedEmailAccounts)
     .values(values)
     .onConflictDoUpdate({
-      target: [connectedEmailAccounts.userId, connectedEmailAccounts.provider, connectedEmailAccounts.emailAddress],
+      target: [
+        connectedEmailAccounts.userId,
+        connectedEmailAccounts.provider,
+        connectedEmailAccounts.emailAddress,
+      ],
       set: {
         accessToken: values.accessToken,
         refreshToken: values.refreshToken,
         tokenExpiresAt: values.tokenExpiresAt,
         scopes: values.scopes,
         status: "active",
+        isActive,
         connectedAt: values.connectedAt,
         updatedAt: values.updatedAt,
       },
     });
 }
 
-export async function disconnect(userId: string, db: Db = defaultDb): Promise<void> {
-  await db
-    .update(connectedEmailAccounts)
-    .set({ status: "revoked", accessToken: null, updatedAt: new Date() })
-    .where(and(eq(connectedEmailAccounts.userId, userId), eq(connectedEmailAccounts.provider, PROVIDER)));
+// ---- Status / listing ---------------------------------------------------------------------
+
+/** The caller's active (selected) sending account, summarized for the dashboard + compose gate. */
+export async function getAccountStatus(userId: string, db: Db = defaultDb): Promise<AccountStatus> {
+  const [row] = await db
+    .select()
+    .from(connectedEmailAccounts)
+    .where(
+      and(eq(connectedEmailAccounts.userId, userId), eq(connectedEmailAccounts.isActive, true)),
+    )
+    .limit(1);
+  if (!row || row.status === "revoked") return { connected: false };
+  return {
+    connected: row.status === "active",
+    provider: row.provider as ProviderKey,
+    emailAddress: row.emailAddress,
+    status: row.status as AccountStatus["status"],
+  };
 }
+
+/** Every connected (non-revoked) account for the settings page, plus connectable providers. */
+export async function listConnectedAccounts(
+  userId: string,
+  db: Db = defaultDb,
+): Promise<EmailAccountsStatus> {
+  const rows = await db
+    .select()
+    .from(connectedEmailAccounts)
+    .where(eq(connectedEmailAccounts.userId, userId));
+  const accounts: ConnectedAccount[] = rows
+    .filter((r) => r.status !== "revoked")
+    .map((r) => ({
+      provider: r.provider as ProviderKey,
+      emailAddress: r.emailAddress,
+      status: r.status as ConnectedAccount["status"],
+      isActive: r.isActive,
+    }));
+  return { accounts, availableProviders: availableProviders() };
+}
+
+// ---- Active-account selection & disconnect ------------------------------------------------
+
+/** Make the given provider's account the sole active sender (FR-019). */
+export async function setActiveAccount(
+  userId: string,
+  provider: ProviderKey,
+  db: Db = defaultDb,
+): Promise<void> {
+  // Only a healthy account can become the sender: activating an expired/revoked one would just
+  // yield `no_active_account` at send time. Reconnect is the recovery path for an expired account.
+  const [target] = await db
+    .select()
+    .from(connectedEmailAccounts)
+    .where(
+      and(
+        eq(connectedEmailAccounts.userId, userId),
+        eq(connectedEmailAccounts.provider, provider),
+        eq(connectedEmailAccounts.status, "active"),
+      ),
+    )
+    .limit(1);
+  if (!target) throw new ConflictError("no_such_account", `No connected ${provider} account.`);
+  if (target.isActive) return;
+
+  // Demote every account first (frees the single-active slot), then promote the target.
+  await runAtomic(db, (x) => [
+    x
+      .update(connectedEmailAccounts)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(
+        and(eq(connectedEmailAccounts.userId, userId), eq(connectedEmailAccounts.isActive, true)),
+      ),
+    x
+      .update(connectedEmailAccounts)
+      .set({ isActive: true, updatedAt: new Date() })
+      .where(eq(connectedEmailAccounts.id, target.id)),
+  ]);
+}
+
+/** Disconnect a provider's account (status → revoked); auto-promote another if it was active. */
+export async function disconnect(
+  userId: string,
+  provider: ProviderKey,
+  db: Db = defaultDb,
+): Promise<void> {
+  const rows = await db
+    .select()
+    .from(connectedEmailAccounts)
+    .where(eq(connectedEmailAccounts.userId, userId));
+  const target = rows.find((r) => r.provider === provider && r.status !== "revoked");
+  if (!target) return;
+
+  // If the disconnected account was the active one, promote another healthy account (any provider).
+  const promote = target.isActive
+    ? (rows.find((r) => r.id !== target.id && r.status === "active" && !r.isActive) ??
+      rows.find((r) => r.id !== target.id && r.status !== "revoked" && !r.isActive))
+    : undefined;
+
+  await runAtomic(db, (x) => {
+    const stmts: Array<PromiseLike<unknown>> = [
+      x
+        .update(connectedEmailAccounts)
+        // Purge both secrets on revoke: for Yahoo the "refresh token" column holds the app
+        // password, and a disconnect is an explicit revocation. Reconnect re-populates it.
+        .set({
+          status: "revoked",
+          isActive: false,
+          accessToken: null,
+          refreshToken: "",
+          updatedAt: new Date(),
+        })
+        .where(eq(connectedEmailAccounts.id, target.id)),
+    ];
+    if (promote) {
+      stmts.push(
+        x
+          .update(connectedEmailAccounts)
+          .set({ isActive: true, updatedAt: new Date() })
+          .where(eq(connectedEmailAccounts.id, promote.id)),
+      );
+    }
+    return stmts;
+  });
+}
+
+// ---- Send-path helpers --------------------------------------------------------------------
 
 export type ActiveAccount = {
   row: ConnectedEmailAccountRow;
@@ -135,7 +324,7 @@ export async function getActiveAccount(userId: string, db: Db = defaultDb): Prom
     .where(
       and(
         eq(connectedEmailAccounts.userId, userId),
-        eq(connectedEmailAccounts.provider, PROVIDER),
+        eq(connectedEmailAccounts.isActive, true),
         eq(connectedEmailAccounts.status, "active"),
       ),
     )
