@@ -2,7 +2,30 @@
   "name": "sendora",
   "version": "0.1.0",
   "private": true,
-  "description": "Cold email outreach for job seekers — recruiter outreach feature",
+  "description": "Recruiter outreach for job seekers: import contacts, personalize with merge fields, and send from your own Gmail or Yahoo account.",
+  "license": "MIT",
+  "author": "Sushant Kadam (https://github.com/sushant66)",
+  "homepage": "https://github.com/sushant66/sendora#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sushant66/sendora.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sushant66/sendora/issues"
+  },
+  "keywords": [
+    "cold-email",
+    "recruiter-outreach",
+    "job-search",
+    "gmail",
+    "nextjs",
+    "drizzle",
+    "typescript"
+  ],
+  "packageManager": "pnpm@10.12.2",
+  "engines": {
+    "node": ">=20.10"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
