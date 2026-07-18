@@ -43,3 +43,11 @@ export class ForbiddenError extends Error {
     this.name = "ForbiddenError";
   }
 }
+
+/** Caller exceeded a rate limit on an expensive endpoint (maps to HTTP 429). */
+export class TooManyRequestsError extends Error {
+  constructor(message = "too many requests") {
+    super(message);
+    this.name = "TooManyRequestsError";
+  }
+}

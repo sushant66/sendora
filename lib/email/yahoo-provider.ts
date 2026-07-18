@@ -57,15 +57,23 @@ class YahooProvider implements EmailProvider {
   }
 }
 
-/** One pooled transport per (mailbox, app-password) pair, memoized for the process. */
-const transports = new Map<string, Transporter>();
+/**
+ * One pooled transport per mailbox, memoized for the process (keyed by address, not by the
+ * secret, so the cache is bounded by connected mailboxes rather than growing on every password
+ * rotation). When the app password changes, the stale transport's pooled socket is closed before
+ * it is replaced, so a rotation never orphans a connection.
+ */
+const transports = new Map<string, { secretHash: string; transport: Transporter }>();
 
 function getTransport(user: string, appPassword: string): Transporter {
-  const key = createHash("sha256").update(`${user}:${appPassword}`).digest("hex");
-  const existing = transports.get(key);
-  if (existing) return existing;
+  const secretHash = createHash("sha256").update(appPassword).digest("hex");
+  const existing = transports.get(user);
+  if (existing) {
+    if (existing.secretHash === secretHash) return existing.transport;
+    existing.transport.close(); // app password rotated — drop the stale pooled connection
+  }
   const transport = createYahooTransport(user, appPassword);
-  transports.set(key, transport);
+  transports.set(user, { secretHash, transport });
   return transport;
 }
 

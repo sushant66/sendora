@@ -4,7 +4,8 @@
  *
  * Each provider is a file implementing this interface plus a factory case — the send flow,
  * batching, and per-recipient result handling stay provider-independent. Gmail sends via the
- * Gmail REST API; Yahoo sends over SMTP (XOAUTH2) since Yahoo has no send REST API.
+ * Gmail REST API; Yahoo sends over SMTP authenticated with an app-specific password (Yahoo has
+ * no send REST API, and we deliberately avoid its OAuth mail scope, which needs a separate approval).
  */
 
 export type ProviderKey = "gmail" | "yahoo"; // future: | "outlook" | "smtp"

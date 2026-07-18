@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db as defaultDb, runAtomic, type Db } from "@/lib/db/client";
 import { connectedEmailAccounts, type ConnectedEmailAccountRow } from "@/lib/db/schema";
 import { getEnv } from "@/lib/validation/env";
@@ -139,7 +139,9 @@ async function persistConnection(db: Db, args: PersistArgs): Promise<void> {
     .select()
     .from(connectedEmailAccounts)
     .where(eq(connectedEmailAccounts.userId, userId));
-  const active = existing.find((r) => r.isActive && r.status !== "revoked");
+  // Only a *healthy* account holds the active slot: an expired account keeps `isActive` (so
+  // reconnect restores it) but must not block a fresh, sendable account from becoming active.
+  const active = existing.find((r) => r.isActive && r.status === "active");
   const isSelf = (r: ConnectedEmailAccountRow) =>
     r.provider === provider && r.emailAddress === emailAddress;
   const isActive = !active || isSelf(active);
@@ -229,6 +231,8 @@ export async function setActiveAccount(
   provider: ProviderKey,
   db: Db = defaultDb,
 ): Promise<void> {
+  // Only a healthy account can become the sender: activating an expired/revoked one would just
+  // yield `no_active_account` at send time. Reconnect is the recovery path for an expired account.
   const [target] = await db
     .select()
     .from(connectedEmailAccounts)
@@ -236,7 +240,7 @@ export async function setActiveAccount(
       and(
         eq(connectedEmailAccounts.userId, userId),
         eq(connectedEmailAccounts.provider, provider),
-        ne(connectedEmailAccounts.status, "revoked"),
+        eq(connectedEmailAccounts.status, "active"),
       ),
     )
     .limit(1);
@@ -281,7 +285,15 @@ export async function disconnect(
     const stmts: Array<PromiseLike<unknown>> = [
       x
         .update(connectedEmailAccounts)
-        .set({ status: "revoked", isActive: false, accessToken: null, updatedAt: new Date() })
+        // Purge both secrets on revoke: for Yahoo the "refresh token" column holds the app
+        // password, and a disconnect is an explicit revocation. Reconnect re-populates it.
+        .set({
+          status: "revoked",
+          isActive: false,
+          accessToken: null,
+          refreshToken: "",
+          updatedAt: new Date(),
+        })
         .where(eq(connectedEmailAccounts.id, target.id)),
     ];
     if (promote) {
