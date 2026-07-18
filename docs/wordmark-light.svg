@@ -1,0 +1,8 @@
+<svg width="300" height="64" viewBox="0 0 300 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Sendora">
+  <rect x="4" y="4" width="56" height="56" rx="15" fill="#B4822A"/>
+  <g transform="translate(16 16)" stroke="#ffffff" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" fill="none">
+    <path d="M23 1 11 13"/>
+    <path d="M23 1 16 23 11 13 1 8 23 1Z" fill="#ffffff" fill-opacity="0.14"/>
+  </g>
+  <text x="74" y="42" font-family="ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="34" font-weight="700" letter-spacing="-0.5" fill="#171717">Sendora</text>
+</svg>
