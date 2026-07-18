@@ -4,6 +4,11 @@ import { ok } from "@/lib/http/responses";
 import { SendRequestSchema } from "@/lib/validation/send";
 import { sendEmails } from "@/lib/send/service";
 
+// SMTP providers (Yahoo) send one message per connection in the loop, which is slower than
+// Gmail's REST API — allow extra wall-clock headroom for larger batches.
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 /**
  * POST /api/send — send a single email or a bulk batch (US2/US4). One uniform contract;
  * `contactIds` length drives single vs bulk. Requires an active connected account, else

@@ -2,12 +2,12 @@
  * Provider-agnostic sending seam (User Story 2, FR-019c).
  * See specs/001-recruiter-outreach/contracts/email-provider.md.
  *
- * Gmail is the only implementation in v1. A future provider (Outlook/Graph, SMTP) is a
- * new file implementing this interface plus a factory case — the send flow, batching, and
- * per-recipient result handling stay provider-independent.
+ * Each provider is a file implementing this interface plus a factory case — the send flow,
+ * batching, and per-recipient result handling stay provider-independent. Gmail sends via the
+ * Gmail REST API; Yahoo sends over SMTP (XOAUTH2) since Yahoo has no send REST API.
  */
 
-export type ProviderKey = "gmail"; // future: | "outlook" | "smtp"
+export type ProviderKey = "gmail" | "yahoo"; // future: | "outlook" | "smtp"
 
 export interface OutgoingMessage {
   fromEmail: string; // the connected account's address

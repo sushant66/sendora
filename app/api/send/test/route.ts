@@ -4,6 +4,8 @@ import { ok } from "@/lib/http/responses";
 import { TestSendRequestSchema } from "@/lib/validation/send";
 import { sendTestEmail } from "@/lib/send/test-send";
 
+export const runtime = "nodejs"; // SMTP (Yahoo) send needs Node net/tls
+
 /**
  * POST /api/send/test — render the current draft and send one test to the job seeker's own
  * inbox (US3, FR-015). Creates no history. 409 no_active_account when no inbox is connected;

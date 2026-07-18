@@ -5,6 +5,7 @@ import {
   timestamp,
   primaryKey,
   integer,
+  boolean,
   uniqueIndex,
   index,
 } from "drizzle-orm/pg-core";
@@ -47,9 +48,7 @@ export const accounts = pgTable(
     id_token: text("id_token"),
     session_state: text("session_state"),
   },
-  (account) => [
-    primaryKey({ columns: [account.provider, account.providerAccountId] }),
-  ],
+  (account) => [primaryKey({ columns: [account.provider, account.providerAccountId] })],
 );
 
 export const sessions = pgTable("session", {
@@ -141,8 +140,12 @@ export type SenderProfileRow = typeof senderProfiles.$inferSelect;
 
 /**
  * ConnectedEmailAccount (User Story 2) — authorization to send from an external provider
- * (FR-019/a/b/c). Gmail is the only `provider` in v1. Tokens are encrypted at rest and
- * never returned to the client.
+ * (FR-019/a/b/c). `provider` holds a ProviderKey ("gmail" | "yahoo"). Tokens are encrypted at
+ * rest and never returned to the client.
+ *
+ * A user may connect more than one provider, but exactly one is the selected sender:
+ * `isActive` marks it, enforced by a partial unique index (at most one active row per user).
+ * `status` is connection health (active | expired | revoked), independent of `isActive`.
  */
 export const connectedEmailAccounts = pgTable(
   "connected_email_account",
@@ -153,18 +156,29 @@ export const connectedEmailAccounts = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    provider: text("provider").notNull(), // "gmail" in v1
+    provider: text("provider").notNull(), // ProviderKey: "gmail" | "yahoo"
     emailAddress: text("email_address").notNull(),
     accessToken: text("access_token"), // encrypted; short-lived
     refreshToken: text("refresh_token").notNull(), // encrypted at rest
     tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }),
     scopes: text("scopes").array().notNull().default([]),
     status: text("status").notNull().default("active"), // active | expired | revoked
+    isActive: boolean("is_active").notNull().default(true), // the selected sending account
     connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("connected_account_user_provider_email_idx").on(t.userId, t.provider, t.emailAddress)],
+  (t) => [
+    uniqueIndex("connected_account_user_provider_email_idx").on(
+      t.userId,
+      t.provider,
+      t.emailAddress,
+    ),
+    // At most one active (selected) sending account per user.
+    uniqueIndex("connected_account_one_active_per_user_idx")
+      .on(t.userId)
+      .where(sql`${t.isActive} = true`),
+  ],
 );
 export type ConnectedEmailAccountRow = typeof connectedEmailAccounts.$inferSelect;
 
@@ -211,7 +225,9 @@ export const sendBatches = pgTable(
     templateId: text("template_id").references(() => emailTemplates.id, { onDelete: "set null" }),
     // 003-resume-attachments: which resume (if any) was attached to every send in this
     // batch. Nullable, onDelete: set null — mirrors templateId exactly (see data-model.md).
-    attachedResumeId: text("attached_resume_id").references(() => resumes.id, { onDelete: "set null" }),
+    attachedResumeId: text("attached_resume_id").references(() => resumes.id, {
+      onDelete: "set null",
+    }),
     kind: text("kind").notNull(), // single | bulk
     total: integer("total").notNull().default(0),
     sentCount: integer("sent_count").notNull().default(0),
