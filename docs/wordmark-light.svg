@@ -1,8 +1,9 @@
 <svg width="300" height="64" viewBox="0 0 300 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Sendora">
   <rect x="4" y="4" width="56" height="56" rx="15" fill="#B4822A"/>
-  <g transform="translate(16 16)" stroke="#ffffff" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" fill="none">
-    <path d="M23 1 11 13"/>
-    <path d="M23 1 16 23 11 13 1 8 23 1Z" fill="#ffffff" fill-opacity="0.14"/>
+  <g transform="translate(14 14) scale(1.5)" stroke="#ffffff" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" fill="none">
+    <path d="M19.75 4.9h-7.5a3.75 3.75 0 0 0 0 7.5h2a3.75 3.75 0 0 1 0 7.5h-5.5"/>
+    <path d="m17 2.15 2.75 2.75L17 7.65"/>
+    <circle cx="6.25" cy="19.9" r="2.1" fill="#ffffff" stroke="none"/>
   </g>
-  <text x="74" y="42" font-family="ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="34" font-weight="700" letter-spacing="-0.5" fill="#171717">Sendora</text>
+  <text x="74" y="44" font-family="ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="34" font-weight="700" letter-spacing="-0.5" fill="#171717">Sendora</text>
 </svg>

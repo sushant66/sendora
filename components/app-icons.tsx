@@ -34,11 +34,17 @@ export const PlusIcon: Glyph = (props) => (
   </svg>
 );
 
-/** Sendora brand mark: an upward paper plane — composed, deliberate sending. */
+/**
+ * Sendora brand mark: an "S" that is also the path of one message. The dot is the
+ * sender, the line is the email, the arrow is where it lands, rising up and right.
+ * Coordinates are optically centered (bbox 4.25–19.75 × 2.15–21.9) and drawn at a
+ * heavier 2px stroke than the nav glyphs so the mark holds at 16px.
+ */
 export const BrandMark: Glyph = (props) => (
-  <svg {...base(props)}>
-    <path d="M4.5 12.5 19 5.5a.6.6 0 0 1 .84.73l-4 12.4a.6.6 0 0 1-1.08.12L11.5 13.5 4.6 11.4a.6.6 0 0 1-.1-1.1Z" />
-    <path d="M11.5 13.5 19.2 6" />
+  <svg {...base({ strokeWidth: 2, ...props })}>
+    <path d="M19.75 4.9h-7.5a3.75 3.75 0 0 0 0 7.5h2a3.75 3.75 0 0 1 0 7.5h-5.5" />
+    <path d="m17 2.15 2.75 2.75L17 7.65" />
+    <circle cx="6.25" cy="19.9" r="2" fill="currentColor" stroke="none" />
   </svg>
 );
 
